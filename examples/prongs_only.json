@@ -1,0 +1,11 @@
+{
+  "stone_shape": "radiant",
+  "stone_length": 8.0,
+  "stone_width": 6.0,
+  "stone_depth": 5.0,
+  "prong_count": 8,
+  "prong_thickness_base": 1.0,
+  "prong_thickness_top": 0.6,
+  "setting_height": 4.0,
+  "base_type": "none"
+}

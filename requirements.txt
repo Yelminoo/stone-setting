@@ -1,0 +1,5 @@
+trimesh
+numpy
+pygltflib
+flask
+flask-cors

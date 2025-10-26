@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NeoGroup GLB Viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+  #dropzone { position: absolute; top:0; left:0; right:0; bottom:0; display:flex;
+              justify-content:center; align-items:center; color:#888;
+              font-family:sans-serif; font-size:1.2em; border:2px dashed #444; }
+  canvas { width:100%; height:100%; display:block; }
+</style>
+</head>
+<body>
+<div id="dropzone">Drag & drop a .glb file here</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+let scene, camera, renderer, controls;
+
+function initViewer(){
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 0.5, 5);
+
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x111111);
+  document.body.appendChild(renderer.domElement);
+
+  const light1 = new THREE.DirectionalLight(0xffffff, 1.0);
+  light1.position.set(2,2,2);
+  scene.add(light1);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  animate();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+function loadGLB(file){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const loader = new THREE.GLTFLoader();
+    loader.parse(e.target.result, '', function(gltf){
+      // Clear existing objects
+      while(scene.children.length > 0) {
+        const child = scene.children[0];
+        if (child.type !== 'DirectionalLight' && child.type !== 'AmbientLight') {
+          scene.remove(child);
+        } else {
+          break;
+        }
+      }
+      // Add the new model
+      scene.add(gltf.scene);
+      
+      // Center and scale the model
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 5 / maxDim;
+      
+      gltf.scene.scale.multiplyScalar(scale);
+      gltf.scene.position.sub(center.multiplyScalar(scale));
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('dropzone').addEventListener('dragover', e => {
+  e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+});
+document.getElementById('dropzone').addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if(file && file.name.endsWith('.glb')){
+    document.getElementById('dropzone').remove();
+    loadGLB(file);
+  }
+});
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+initViewer();
+</script>
+</body>
+</html>

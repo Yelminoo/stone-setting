@@ -1,0 +1,22 @@
+{
+  "name": "parametric-stone-setting-generator",
+  "version": "1.0.0",
+  "description": "Web-based parametric stone setting generator for jewelry design",
+  "main": "static/index.html",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "start": "echo 'Static site deployed'"
+  },
+  "keywords": [
+    "jewelry",
+    "3d",
+    "parametric",
+    "stone-setting",
+    "cad"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.x"
+  }
+}

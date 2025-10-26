@@ -1,0 +1,14 @@
+{
+  "stone_shape": "round",
+  "stone_length": 7.0,
+  "stone_width": 7.0,
+  "stone_depth": 4.5,
+  "prong_count": 6,
+  "prong_thickness_base": 0.9,
+  "prong_thickness_top": 0.5,
+  "setting_height": 3.5,
+  "prong_base_style": "shared",
+  "prong_base_width": 1.0,
+  "prong_base_height": 0.8,
+  "base_type": "none"
+}

@@ -1,0 +1,17 @@
+{
+  "stone_shape": "princess",
+  "stone_length": 5.0,
+  "stone_width": 5.0,
+  "stone_depth": 3.5,
+  "prong_count": 4,
+  "prong_thickness_base": 0.7,
+  "prong_thickness_top": 0.4,
+  "setting_height": 3.0,
+  "prong_base_style": "individual",
+  "prong_base_width": 1.5,
+  "prong_base_height": 1.2,
+  "base_type": "ring",
+  "ring_outer_radius": 8.5,
+  "ring_inner_radius": 5.0,
+  "ring_thickness": 2.0
+}

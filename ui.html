@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Parametric Stone Setting Generator</title>
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    margin: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+  }
+  
+  .container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .controls {
+    background: white;
+    padding: 20px;
+    overflow-y: auto;
+    box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+    width: 400px;
+    min-width: 300px;
+    max-width: 800px;
+    flex-shrink: 0;
+  }
+  
+  .divider {
+    width: 6px;
+    background: linear-gradient(90deg, #e9ecef, #dee2e6, #e9ecef);
+    cursor: col-resize;
+    user-select: none;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+  }
+  
+  .divider:hover {
+    background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+  }
+  
+  .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background: #adb5bd;
+    border-radius: 1px;
+    transition: background 0.2s ease;
+  }
+  
+  .divider:hover::after {
+    background: white;
+  }
+  
+  .divider.resizing {
+    background: linear-gradient(90deg, #667eea, #764ba2, #667eea) !important;
+  }
+  
+  .divider.resizing::after {
+    background: white !important;
+  }
+  
+  .container.resizing {
+    cursor: col-resize;
+  }
+  
+  .container.resizing * {
+    user-select: none;
+    pointer-events: none;
+  }
+  
+  .container.resizing .divider {
+    pointer-events: all;
+  }
+  
+  /* Responsive design for smaller screens */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+    
+    .controls {
+      width: 100% !important;
+      max-width: none;
+      max-height: 50vh;
+      min-width: auto;
+    }
+    
+    .divider {
+      width: 100%;
+      height: 6px;
+      cursor: row-resize;
+    }
+    
+    .divider::after {
+      width: 30px;
+      height: 2px;
+    }
+    
+    .viewer {
+      flex: 1;
+      min-width: auto;
+      min-height: 300px;
+    }
+  }
+  
+  /* Width indicator tooltip */
+  .width-indicator {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  
+  .divider.resizing .width-indicator {
+    opacity: 1;
+  }
+  
+  .viewer {
+    background: #222;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 18px;
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  h1 {
+    color: #333;
+    margin: 0 0 30px 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  .section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .section h3 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  
+  .section h3:before {
+    content: "";
+    width: 4px;
+    height: 16px;
+    background: #667eea;
+    margin-right: 10px;
+    border-radius: 2px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+  }
+  
+  input, select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  input:focus, select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  input[type="range"] {
+    padding: 0;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    border: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  
+  .range-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .range-group input[type="range"] {
+    flex: 1;
+  }
+  
+  .range-value {
+    background: #667eea;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 45px;
+    text-align: center;
+  }
+  
+  .button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  .btn-secondary {
+    background: #6c757d;
+    color: white;
+  }
+  
+  .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+  }
+  
+  .status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+  }
+  
+  .status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  
+  .status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .status.loading {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+  
+  #dropzone {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 40px;
+    border: 3px dashed #555;
+    border-radius: 12px;
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+  }
+  
+  #dropzone.hidden { display: none; }
+  
+  canvas { 
+    width: 100%; 
+    height: 100%; 
+    display: block; 
+  }
+  
+  .preset-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .preset-btn {
+    padding: 8px 12px;
+    background: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .preset-btn:hover {
+    background: #667eea;
+    color: white;
+  }
+  
+  .preset-btn.active {
+    background: #667eea;
+    color: white;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="controls" id="controls">
+    <h1>💎 Stone Setting Generator</h1>
+    
+    <!-- Presets -->
+    <div class="section">
+      <h3>Quick Presets</h3>
+      <div class="preset-buttons">
+        <button class="preset-btn" onclick="loadPreset('solitaire')">Solitaire</button>
+        <button class="preset-btn" onclick="loadPreset('halo')">Halo</button>
+        <button class="preset-btn" onclick="loadPreset('vintage')">Vintage</button>
+      </div>
+    </div>
+    
+    <!-- Stone Parameters -->
+    <div class="section">
+      <h3>Stone Properties</h3>
+      
+      <div class="form-group">
+        <label for="stone_shape">Stone Shape</label>
+        <select id="stone_shape" onchange="updatePreview()">
+          <option value="round">Round</option>
+          <option value="princess">Princess</option>
+          <option value="radiant">Radiant</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="stone_length">Length (mm)</label>
+        <div class="range-group">
+          <input type="range" id="stone_length" min="3" max="15" step="0.1" value="6.5" oninput="updateRangeValue('stone_length'); updatePreview()">
+          <span class="range-value" id="stone_length_value">6.5</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="stone_width">Width (mm)</label>
+        <div class="range-group">
+          <input type="range" id="stone_width" min="3" max="15" step="0.1" value="6.5" oninput="updateRangeValue('stone_width'); updatePreview()">
+          <span class="range-value" id="stone_width_value">6.5</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="stone_depth">Depth (mm)</label>
+        <div class="range-group">
+          <input type="range" id="stone_depth" min="2" max="10" step="0.1" value="4.0" oninput="updateRangeValue('stone_depth'); updatePreview()">
+          <span class="range-value" id="stone_depth_value">4.0</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Prong Parameters -->
+    <div class="section">
+      <h3>Prong Settings</h3>
+      
+      <div class="form-group">
+        <label for="prong_count">Number of Prongs</label>
+        <select id="prong_count" onchange="updatePreview()">
+          <option value="2">2 Prongs</option>
+          <option value="4" selected>4 Prongs</option>
+          <option value="6">6 Prongs</option>
+          <option value="8">8 Prongs</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="prong_thickness_base">Base Thickness (mm)</label>
+        <div class="range-group">
+          <input type="range" id="prong_thickness_base" min="0.3" max="2.0" step="0.1" value="0.8" oninput="updateRangeValue('prong_thickness_base'); updatePreview()">
+          <span class="range-value" id="prong_thickness_base_value">0.8</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="prong_thickness_top">Top Thickness (mm)</label>
+        <div class="range-group">
+          <input type="range" id="prong_thickness_top" min="0.2" max="1.5" step="0.1" value="0.5" oninput="updateRangeValue('prong_thickness_top'); updatePreview()">
+          <span class="range-value" id="prong_thickness_top_value">0.5</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="setting_height">Setting Height (mm)</label>
+        <div class="range-group">
+          <input type="range" id="setting_height" min="1.5" max="8.0" step="0.1" value="3.5" oninput="updateRangeValue('setting_height'); updatePreview()">
+          <span class="range-value" id="setting_height_value">3.5</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Prong Base Parameters -->
+    <div class="section">
+      <h3>Prong Base Style</h3>
+      
+      <div class="form-group">
+        <label for="prong_base_style">Base Style</label>
+        <select id="prong_base_style" onchange="updatePreview()">
+          <option value="individual">Individual Bases</option>
+          <option value="shared">Shared Connections</option>
+          <option value="gallery" selected>Gallery Rail</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="prong_base_width">Base Width (mm)</label>
+        <div class="range-group">
+          <input type="range" id="prong_base_width" min="0.5" max="3.0" step="0.1" value="1.2" oninput="updateRangeValue('prong_base_width'); updatePreview()">
+          <span class="range-value" id="prong_base_width_value">1.2</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="prong_base_height">Base Height (mm)</label>
+        <div class="range-group">
+          <input type="range" id="prong_base_height" min="0.3" max="2.5" step="0.1" value="1.0" oninput="updateRangeValue('prong_base_height'); updatePreview()">
+          <span class="range-value" id="prong_base_height_value">1.0</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Ring Base Parameters -->
+    <div class="section">
+      <h3>Ring Base (Optional)</h3>
+      
+      <div class="form-group">
+        <label for="base_type">Base Type</label>
+        <select id="base_type" onchange="updatePreview()">
+          <option value="none">No Base</option>
+          <option value="minimal" selected>Minimal Platform</option>
+          <option value="ring">Full Ring</option>
+        </select>
+      </div>
+      
+      <div id="ring_params" style="display: none;">
+        <div class="form-group">
+          <label for="ring_outer_radius">Ring Outer Radius (mm)</label>
+          <div class="range-group">
+            <input type="range" id="ring_outer_radius" min="6" max="15" step="0.1" value="8.5" oninput="updateRangeValue('ring_outer_radius'); updatePreview()">
+            <span class="range-value" id="ring_outer_radius_value">8.5</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="ring_inner_radius">Ring Inner Radius (mm)</label>
+          <div class="range-group">
+            <input type="range" id="ring_inner_radius" min="3" max="10" step="0.1" value="5.0" oninput="updateRangeValue('ring_inner_radius'); updatePreview()">
+            <span class="range-value" id="ring_inner_radius_value">5.0</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="ring_thickness">Ring Thickness (mm)</label>
+          <div class="range-group">
+            <input type="range" id="ring_thickness" min="1.0" max="5.0" step="0.1" value="2.0" oninput="updateRangeValue('ring_thickness'); updatePreview()">
+            <span class="range-value" id="ring_thickness_value">2.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="button-group">
+      <button class="btn-primary" onclick="generateModels()">Generate 3D Models</button>
+      <button class="btn-secondary" onclick="exportParams()">Export Parameters</button>
+    </div>
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <div class="divider" id="divider">
+    <div class="width-indicator" id="widthIndicator">400px</div>
+  </div>
+  
+  <div class="viewer" id="viewer">
+    <div id="dropzone">
+      <div>🎯 3D Preview</div>
+      <div style="margin-top: 10px; font-size: 14px;">Generated models will appear here</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+let scene, camera, renderer, controls;
+let currentModel = null;
+
+// Initialize 3D viewer
+function initViewer() {
+  const viewer = document.getElementById('viewer');
+  
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
+  camera.position.set(0, 0.5, 5);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+  renderer.setClearColor(0x222222);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  
+  // Replace dropzone with canvas
+  const dropzone = document.getElementById('dropzone');
+  dropzone.parentNode.replaceChild(renderer.domElement, dropzone);
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(5, 10, 5);
+  directionalLight.castShadow = true;
+  scene.add(directionalLight);
+  
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+  fillLight.position.set(-5, 0, -5);
+  scene.add(fillLight);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  
+  animate();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// Handle window resize
+function handleResize() {
+  const viewer = document.getElementById('viewer');
+  if (camera && renderer) {
+    camera.aspect = viewer.clientWidth / viewer.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+  }
+}
+
+window.addEventListener('resize', handleResize);
+
+// Resizable divider functionality
+let isResizing = false;
+
+document.getElementById('divider').addEventListener('mousedown', (e) => {
+  isResizing = true;
+  
+  // Add visual feedback
+  const container = document.querySelector('.container');
+  const divider = document.getElementById('divider');
+  
+  container.classList.add('resizing');
+  divider.classList.add('resizing');
+  
+  // Prevent text selection during drag
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  
+  const container = document.querySelector('.container');
+  const controls = document.getElementById('controls');
+  const widthIndicator = document.getElementById('widthIndicator');
+  const containerRect = container.getBoundingClientRect();
+  
+  // Calculate new width as percentage of container
+  let newWidth = e.clientX - containerRect.left;
+  
+  // Apply constraints
+  const minWidth = 300;
+  const maxWidth = Math.min(800, containerRect.width * 0.7);
+  
+  newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+  
+  // Apply new width
+  controls.style.width = newWidth + 'px';
+  
+  // Update width indicator
+  widthIndicator.textContent = Math.round(newWidth) + 'px';
+  
+  // Trigger resize for 3D viewer
+  setTimeout(handleResize, 0);
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    
+    // Remove visual feedback
+    const container = document.querySelector('.container');
+    const divider = document.getElementById('divider');
+    
+    container.classList.remove('resizing');
+    divider.classList.remove('resizing');
+  }
+});
+
+// Prevent drag issues
+document.addEventListener('selectstart', (e) => {
+  if (isResizing) e.preventDefault();
+});
+
+// Double-click to reset to default width
+document.getElementById('divider').addEventListener('dblclick', () => {
+  const controls = document.getElementById('controls');
+  controls.style.width = '400px';
+  setTimeout(handleResize, 0);
+});
+
+// Update range value displays
+function updateRangeValue(id) {
+  const slider = document.getElementById(id);
+  const valueSpan = document.getElementById(id + '_value');
+  valueSpan.textContent = slider.value;
+}
+
+// Initialize all range values
+function initRangeValues() {
+  const ranges = document.querySelectorAll('input[type="range"]');
+  ranges.forEach(range => {
+    updateRangeValue(range.id);
+  });
+}
+
+// Show/hide ring parameters
+document.getElementById('base_type').addEventListener('change', function() {
+  const ringParams = document.getElementById('ring_params');
+  ringParams.style.display = this.value === 'ring' ? 'block' : 'none';
+});
+
+// Load preset configurations
+function loadPreset(preset) {
+  const presets = {
+    solitaire: {
+      stone_shape: 'round',
+      stone_length: 6.5,
+      stone_width: 6.5,
+      stone_depth: 4.0,
+      prong_count: 4,
+      prong_thickness_base: 0.8,
+      prong_thickness_top: 0.5,
+      setting_height: 3.5,
+      prong_base_style: 'gallery',
+      prong_base_width: 1.0,
+      prong_base_height: 0.8,
+      base_type: 'ring',
+      ring_outer_radius: 8.5,
+      ring_inner_radius: 5.0,
+      ring_thickness: 2.0
+    },
+    halo: {
+      stone_shape: 'round',
+      stone_length: 5.0,
+      stone_width: 5.0,
+      stone_depth: 3.5,
+      prong_count: 6,
+      prong_thickness_base: 0.6,
+      prong_thickness_top: 0.3,
+      setting_height: 2.8,
+      prong_base_style: 'individual',
+      prong_base_width: 0.8,
+      prong_base_height: 0.6,
+      base_type: 'minimal'
+    },
+    vintage: {
+      stone_shape: 'princess',
+      stone_length: 6.0,
+      stone_width: 6.0,
+      stone_depth: 4.2,
+      prong_count: 4,
+      prong_thickness_base: 1.0,
+      prong_thickness_top: 0.6,
+      setting_height: 4.0,
+      prong_base_style: 'shared',
+      prong_base_width: 1.4,
+      prong_base_height: 1.2,
+      base_type: 'ring',
+      ring_outer_radius: 9.0,
+      ring_inner_radius: 5.2,
+      ring_thickness: 2.5
+    }
+  };
+  
+  const params = presets[preset];
+  if (!params) return;
+  
+  // Update all form fields
+  Object.keys(params).forEach(key => {
+    const element = document.getElementById(key);
+    if (element) {
+      element.value = params[key];
+      if (element.type === 'range') {
+        updateRangeValue(key);
+      }
+    }
+  });
+  
+  // Show ring params if needed
+  document.getElementById('ring_params').style.display = 
+    params.base_type === 'ring' ? 'block' : 'none';
+  
+  // Update active preset button
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  updatePreview();
+}
+
+// Get current parameters
+function getCurrentParams() {
+  const params = {};
+  const inputs = document.querySelectorAll('input, select');
+  inputs.forEach(input => {
+    if (input.type === 'range' || input.type === 'number') {
+      params[input.id] = parseFloat(input.value);
+    } else {
+      params[input.id] = input.value;
+    }
+  });
+  return params;
+}
+
+// Show status message
+function showStatus(message, type = 'loading') {
+  const status = document.getElementById('status');
+  status.textContent = message;
+  status.className = `status ${type}`;
+  status.style.display = 'block';
+  
+  if (type !== 'loading') {
+    setTimeout(() => {
+      status.style.display = 'none';
+    }, 3000);
+  }
+}
+
+// Generate 3D models
+async function generateModels() {
+  const params = getCurrentParams();
+  
+  showStatus('Generating 3D models...', 'loading');
+  
+  try {
+    const response = await fetch('/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate models');
+    }
+    
+    const result = await response.json();
+    showStatus('Models generated successfully!', 'success');
+    
+    // Load the designer model
+    loadModel('/output/designer.glb');
+    
+  } catch (error) {
+    console.error('Error:', error);
+    showStatus('Error generating models: ' + error.message, 'error');
+  }
+}
+
+// Load 3D model
+function loadModel(url) {
+  const loader = new THREE.GLTFLoader();
+  
+  loader.load(url, function(gltf) {
+    // Remove existing model
+    if (currentModel) {
+      scene.remove(currentModel);
+    }
+    
+    currentModel = gltf.scene;
+    scene.add(currentModel);
+    
+    // Center and scale the model
+    const box = new THREE.Box3().setFromObject(currentModel);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 3 / maxDim;
+    
+    currentModel.scale.multiplyScalar(scale);
+    currentModel.position.sub(center.multiplyScalar(scale));
+    
+    // Enable shadows
+    currentModel.traverse(function(node) {
+      if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    });
+    
+  }, undefined, function(error) {
+    console.error('Error loading model:', error);
+    showStatus('Error loading 3D model', 'error');
+  });
+}
+
+// Export parameters
+function exportParams() {
+  const params = getCurrentParams();
+  const dataStr = JSON.stringify(params, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = 'stone_setting_params.json';
+  link.click();
+  
+  showStatus('Parameters exported!', 'success');
+}
+
+// Auto-preview (debounced)
+let previewTimeout;
+function updatePreview() {
+  clearTimeout(previewTimeout);
+  previewTimeout = setTimeout(() => {
+    // Auto-generate could go here for real-time preview
+    // For now, just update the UI
+  }, 500);
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  initViewer();
+  initRangeValues();
+});
+</script>
+</body>
+</html>
