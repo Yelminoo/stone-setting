@@ -1,1 +1,1 @@
-flask
+# No external dependencies required for basic HTTP handler

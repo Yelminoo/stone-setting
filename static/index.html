@@ -60,80 +60,6 @@
     background: white;
   }
   
-  .divider.resizing {
-    background: linear-gradient(90deg, #667eea, #764ba2, #667eea) !important;
-  }
-  
-  .divider.resizing::after {
-    background: white !important;
-  }
-  
-  .container.resizing {
-    cursor: col-resize;
-  }
-  
-  .container.resizing * {
-    user-select: none;
-    pointer-events: none;
-  }
-  
-  .container.resizing .divider {
-    pointer-events: all;
-  }
-  
-  /* Responsive design for smaller screens */
-  @media (max-width: 768px) {
-    .container {
-      flex-direction: column;
-    }
-    
-    .controls {
-      width: 100% !important;
-      max-width: none;
-      max-height: 50vh;
-      min-width: auto;
-    }
-    
-    .divider {
-      width: 100%;
-      height: 6px;
-      cursor: row-resize;
-    }
-    
-    .divider::after {
-      width: 30px;
-      height: 2px;
-    }
-    
-    .viewer {
-      flex: 1;
-      min-width: auto;
-      min-height: 300px;
-    }
-  }
-  
-  /* Width indicator tooltip */
-  .width-indicator {
-    position: absolute;
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    z-index: 1000;
-  }
-  
-  .divider.resizing .width-indicator {
-    opacity: 1;
-  }
-  
   .viewer {
     background: #222;
     position: relative;
@@ -309,25 +235,46 @@
     border: 1px solid #bee5eb;
   }
   
-  #dropzone {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 40px;
-    border: 3px dashed #555;
+  .preview-box {
+    background: #1a1a1a;
     border-radius: 12px;
+    padding: 30px;
+    margin: 20px;
     text-align: center;
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
+    border: 2px dashed #444;
   }
   
-  #dropzone.hidden { display: none; }
+  .preview-content {
+    font-size: 16px;
+    line-height: 1.6;
+  }
   
-  canvas { 
-    width: 100%; 
-    height: 100%; 
-    display: block; 
+  .param-display {
+    background: #2a2a2a;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #fff;
+    overflow-x: auto;
+  }
+  
+  .param-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #444;
+  }
+  
+  .param-key {
+    color: #667eea;
+    font-weight: 600;
+  }
+  
+  .param-value {
+    color: #ffd700;
   }
   
   .preset-buttons {
@@ -355,6 +302,37 @@
   .preset-btn.active {
     background: #667eea;
     color: white;
+  }
+
+  /* Responsive design for smaller screens */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+    
+    .controls {
+      width: 100% !important;
+      max-width: none;
+      max-height: 50vh;
+      min-width: auto;
+    }
+    
+    .divider {
+      width: 100%;
+      height: 6px;
+      cursor: row-resize;
+    }
+    
+    .divider::after {
+      width: 30px;
+      height: 2px;
+    }
+    
+    .viewer {
+      flex: 1;
+      min-width: auto;
+      min-height: 300px;
+    }
   }
 </style>
 </head>
@@ -522,165 +500,29 @@
     
     <!-- Action Buttons -->
     <div class="button-group">
-      <button class="btn-primary" onclick="generateModels()">Generate 3D Models</button>
-      <button class="btn-secondary" onclick="exportParams()">Export Parameters</button>
+      <button class="btn-primary" onclick="exportParams()">Export Parameters</button>
+      <button class="btn-secondary" onclick="downloadConfig()">Download JSON</button>
     </div>
     
     <div id="status" class="status"></div>
   </div>
   
-  <div class="divider" id="divider">
-    <div class="width-indicator" id="widthIndicator">400px</div>
-  </div>
+  <div class="divider" id="divider"></div>
   
   <div class="viewer" id="viewer">
-    <div id="dropzone">
-      <div>🎯 3D Preview</div>
-      <div style="margin-top: 10px; font-size: 14px;">Generated models will appear here</div>
+    <div class="preview-box">
+      <div class="preview-content">
+        <div>🎯 Parameter Preview</div>
+        <div style="margin-top: 10px; font-size: 14px;">Adjust parameters to see live configuration</div>
+        <div class="param-display" id="paramDisplay">
+          <!-- Parameters will be displayed here -->
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
 <script>
-let scene, camera, renderer, controls;
-let currentModel = null;
-
-// Initialize 3D viewer
-function initViewer() {
-  const viewer = document.getElementById('viewer');
-  
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(60, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
-  camera.position.set(0, 0.5, 5);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-  renderer.setClearColor(0x222222);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  
-  // Replace dropzone with canvas
-  const dropzone = document.getElementById('dropzone');
-  dropzone.parentNode.replaceChild(renderer.domElement, dropzone);
-
-  // Lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-  scene.add(ambientLight);
-  
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(5, 10, 5);
-  directionalLight.castShadow = true;
-  scene.add(directionalLight);
-  
-  const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-  fillLight.position.set(-5, 0, -5);
-  scene.add(fillLight);
-
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  
-  animate();
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-// Handle window resize
-function handleResize() {
-  const viewer = document.getElementById('viewer');
-  if (camera && renderer) {
-    camera.aspect = viewer.clientWidth / viewer.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-  }
-}
-
-window.addEventListener('resize', handleResize);
-
-// Resizable divider functionality
-let isResizing = false;
-
-document.getElementById('divider').addEventListener('mousedown', (e) => {
-  isResizing = true;
-  
-  // Add visual feedback
-  const container = document.querySelector('.container');
-  const divider = document.getElementById('divider');
-  
-  container.classList.add('resizing');
-  divider.classList.add('resizing');
-  
-  // Prevent text selection during drag
-  e.preventDefault();
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (!isResizing) return;
-  
-  const container = document.querySelector('.container');
-  const controls = document.getElementById('controls');
-  const widthIndicator = document.getElementById('widthIndicator');
-  const containerRect = container.getBoundingClientRect();
-  
-  // Calculate new width as percentage of container
-  let newWidth = e.clientX - containerRect.left;
-  
-  // Apply constraints
-  const minWidth = 300;
-  const maxWidth = Math.min(800, containerRect.width * 0.7);
-  
-  newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-  
-  // Apply new width
-  controls.style.width = newWidth + 'px';
-  
-  // Update width indicator
-  widthIndicator.textContent = Math.round(newWidth) + 'px';
-  
-  // Trigger resize for 3D viewer
-  setTimeout(handleResize, 0);
-});
-
-document.addEventListener('mouseup', () => {
-  if (isResizing) {
-    isResizing = false;
-    
-    // Remove visual feedback
-    const container = document.querySelector('.container');
-    const divider = document.getElementById('divider');
-    
-    container.classList.remove('resizing');
-    divider.classList.remove('resizing');
-  }
-});
-
-// Prevent drag issues
-document.addEventListener('selectstart', (e) => {
-  if (isResizing) e.preventDefault();
-});
-
-// Double-click to reset to default width
-document.getElementById('divider').addEventListener('dblclick', () => {
-  const controls = document.getElementById('controls');
-  controls.style.width = '400px';
-  setTimeout(handleResize, 0);
-});
-
-// Update range value displays
-function updateRangeValue(id) {
-  const slider = document.getElementById(id);
-  const valueSpan = document.getElementById(id + '_value');
-  valueSpan.textContent = slider.value;
-}
-
 // Initialize all range values
 function initRangeValues() {
   const ranges = document.querySelectorAll('input[type="range"]');
@@ -689,10 +531,20 @@ function initRangeValues() {
   });
 }
 
+// Update range value displays
+function updateRangeValue(id) {
+  const slider = document.getElementById(id);
+  const valueSpan = document.getElementById(id + '_value');
+  if (valueSpan) {
+    valueSpan.textContent = slider.value;
+  }
+}
+
 // Show/hide ring parameters
 document.getElementById('base_type').addEventListener('change', function() {
   const ringParams = document.getElementById('ring_params');
   ringParams.style.display = this.value === 'ring' ? 'block' : 'none';
+  updatePreview();
 });
 
 // Load preset configurations
@@ -787,6 +639,46 @@ function getCurrentParams() {
   return params;
 }
 
+// Update parameter preview
+function updatePreview() {
+  const params = getCurrentParams();
+  const display = document.getElementById('paramDisplay');
+  
+  let html = '';
+  Object.keys(params).forEach(key => {
+    if (params[key] !== undefined && params[key] !== '') {
+      const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      html += `<div class="param-row">
+        <span class="param-key">${displayKey}:</span>
+        <span class="param-value">${params[key]}</span>
+      </div>`;
+    }
+  });
+  
+  display.innerHTML = html;
+}
+
+// Export parameters
+function exportParams() {
+  const params = getCurrentParams();
+  showStatus('Parameters ready for export!', 'success');
+  console.log('Stone Setting Parameters:', params);
+}
+
+// Download configuration
+function downloadConfig() {
+  const params = getCurrentParams();
+  const dataStr = JSON.stringify(params, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = 'stone_setting_params.json';
+  link.click();
+  
+  showStatus('Configuration downloaded!', 'success');
+}
+
 // Show status message
 function showStatus(message, type = 'loading') {
   const status = document.getElementById('status');
@@ -801,102 +693,64 @@ function showStatus(message, type = 'loading') {
   }
 }
 
-// Generate 3D models
-async function generateModels() {
-  const params = getCurrentParams();
+// Resizable divider functionality
+let isResizing = false;
+
+function handleResize() {
+  // Placeholder for viewport resize handling
+}
+
+document.getElementById('divider').addEventListener('mousedown', (e) => {
+  isResizing = true;
   
-  showStatus('Generating 3D models...', 'loading');
+  const container = document.querySelector('.container');
+  const divider = document.getElementById('divider');
   
-  try {
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params)
-    });
+  container.classList.add('resizing');
+  divider.classList.add('resizing');
+  
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  
+  const container = document.querySelector('.container');
+  const controls = document.getElementById('controls');
+  const containerRect = container.getBoundingClientRect();
+  
+  let newWidth = e.clientX - containerRect.left;
+  
+  const minWidth = 300;
+  const maxWidth = Math.min(800, containerRect.width * 0.7);
+  
+  newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+  
+  controls.style.width = newWidth + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
     
-    if (!response.ok) {
-      throw new Error('Failed to generate models');
-    }
+    const container = document.querySelector('.container');
+    const divider = document.getElementById('divider');
     
-    const result = await response.json();
-    showStatus('Models generated successfully!', 'success');
-    
-    // Load the designer model
-    loadModel('/output/designer.glb');
-    
-  } catch (error) {
-    console.error('Error:', error);
-    showStatus('Error generating models: ' + error.message, 'error');
+    container.classList.remove('resizing');
+    divider.classList.remove('resizing');
   }
-}
+});
 
-// Load 3D model
-function loadModel(url) {
-  const loader = new THREE.GLTFLoader();
-  
-  loader.load(url, function(gltf) {
-    // Remove existing model
-    if (currentModel) {
-      scene.remove(currentModel);
-    }
-    
-    currentModel = gltf.scene;
-    scene.add(currentModel);
-    
-    // Center and scale the model
-    const box = new THREE.Box3().setFromObject(currentModel);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 3 / maxDim;
-    
-    currentModel.scale.multiplyScalar(scale);
-    currentModel.position.sub(center.multiplyScalar(scale));
-    
-    // Enable shadows
-    currentModel.traverse(function(node) {
-      if (node.isMesh) {
-        node.castShadow = true;
-        node.receiveShadow = true;
-      }
-    });
-    
-  }, undefined, function(error) {
-    console.error('Error loading model:', error);
-    showStatus('Error loading 3D model', 'error');
-  });
-}
-
-// Export parameters
-function exportParams() {
-  const params = getCurrentParams();
-  const dataStr = JSON.stringify(params, null, 2);
-  const dataBlob = new Blob([dataStr], { type: 'application/json' });
-  
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(dataBlob);
-  link.download = 'stone_setting_params.json';
-  link.click();
-  
-  showStatus('Parameters exported!', 'success');
-}
-
-// Auto-preview (debounced)
-let previewTimeout;
-function updatePreview() {
-  clearTimeout(previewTimeout);
-  previewTimeout = setTimeout(() => {
-    // Auto-generate could go here for real-time preview
-    // For now, just update the UI
-  }, 500);
-}
+// Double-click to reset width
+document.getElementById('divider').addEventListener('dblclick', () => {
+  const controls = document.getElementById('controls');
+  controls.style.width = '400px';
+});
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-  initViewer();
   initRangeValues();
+  updatePreview();
 });
 </script>
 </body>
