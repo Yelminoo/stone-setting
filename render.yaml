@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stone-setting
+    env: docker
+    plan: starter
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: "5000"
+    healthCheckPath: /health
+    pullRequestPreviews: false
