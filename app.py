@@ -9,6 +9,9 @@ import json
 import os
 from pathlib import Path
 from parametric_setting_core import generate_stone_setting
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
@@ -69,9 +72,10 @@ def generate():
             if key not in params:
                 params[key] = value
         
-        # Generate file paths
-        designer_path = output_dir / "designer.glb"
-        production_path = output_dir / "production.glb"
+    # Generate file paths (timestamped to avoid collisions)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    designer_path = output_dir / f"designer_{timestamp}.glb"
+    production_path = output_dir / f"production_{timestamp}.glb"
         
         # Generate the stone setting
         generate_stone_setting(
@@ -94,13 +98,42 @@ def generate():
             designer_filename=str(designer_path),
             production_filename=str(production_path)
         )
-        
-        return jsonify({
+        # Optionally upload outputs to S3 if environment is configured
+        s3_bucket = os.environ.get('S3_BUCKET')
+        designer_url = None
+        production_url = None
+
+        def upload_to_s3(local_path, key):
+            try:
+                s3_client = boto3.client('s3',
+                                         aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                                         region_name=os.environ.get('AWS_REGION'))
+                s3_client.upload_file(str(local_path), s3_bucket, key)
+                return f"https://{s3_bucket}.s3.amazonaws.com/{key}"
+            except (BotoCoreError, ClientError) as e:
+                print(f"S3 upload failed: {e}")
+                return None
+
+        if s3_bucket:
+            designer_key = f"designer_{timestamp}.glb"
+            production_key = f"production_{timestamp}.glb"
+            designer_url = upload_to_s3(designer_path, designer_key)
+            production_url = upload_to_s3(production_path, production_key)
+
+        response = {
             'success': True,
-            'designer_file': 'output/designer.glb',
-            'production_file': 'output/production.glb',
+            'designer_file': str(designer_path),
+            'production_file': str(production_path),
             'message': 'Stone setting generated successfully'
-        })
+        }
+
+        if designer_url:
+            response['designer_url'] = designer_url
+        if production_url:
+            response['production_url'] = production_url
+
+        return jsonify(response)
         
     except Exception as e:
         print(f"Error generating stone setting: {e}")
@@ -201,9 +234,14 @@ def health_check():
     return jsonify({'status': 'healthy', 'service': 'Stone Setting Generator API'})
 
 if __name__ == '__main__':
+    # Production-friendly run: read PORT from env and disable debug unless explicitly set
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', '0') == '1'
     print("🚀 Starting Parametric Stone Setting Generator Server")
-    print("📱 Web UI: http://localhost:5000")
-    print("🔧 API: http://localhost:5000/generate")
-    print("👁️ Viewer: http://localhost:5000/view.html")
+    print(f"📱 Web UI: http://localhost:{port}")
+    print("🔧 API: http://localhost:{}/generate".format(port))
+    print(f"👁️ Viewer: http://localhost:{port}/view.html")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # When deployed with a production server (gunicorn), this block won't run.
+    app.run(debug=debug, host='0.0.0.0', port=port)

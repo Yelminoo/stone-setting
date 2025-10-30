@@ -3,3 +3,4 @@ numpy
 pygltflib
 flask
 flask-cors
+boto3
