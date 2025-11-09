@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+        #viewer {
+            flex: 1;
+            position: relative;
+        }
+        #controls {
+            width: 320px;
+            background: #2a2a2a;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #3a3a3a;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        h2 {
+            font-size: 16px;
+            margin: 20px 0 10px 0;
+            color: #64B5F6;
+        }
+        .control-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        .info {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-bottom: 15px;
+            border-left: 3px solid #4CAF50;
+        }
+        .selected-object {
+            background: #1a4d1a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 2px solid #4CAF50;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 3px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        #status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            z-index: 100;
+        }
+        .axis-label {
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="viewer">
+            <div id="status">Click on objects to select and drag them</div>
+        </div>
+        <div id="controls">
+            <h1>💍 Stone Setting Generator</h1>
+            
+            <div class="info">
+                <strong>Controls:</strong><br>
+                • Left Click + Drag: Rotate view<br>
+                • Right Click + Drag: Pan view<br>
+                • Scroll: Zoom<br>
+            </div>
+
+            <h2>💎 Stone Parameters</h2>
+            
+            <div class="control-group">
+                <label>Stone Shape</label>
+                <select id="stoneShape">
+                    <option value="round">Round</option>
+                    <option value="princess">Princess</option>
+                    <option value="radiant">Radiant</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Stone Length (mm)</label>
+                <input type="number" id="stoneLength" value="6.5" step="0.1" min="2" max="15">
+            </div>
+            
+            <div class="control-group">
+                <label>Stone Width (mm)</label>
+                <input type="number" id="stoneWidth" value="6.5" step="0.1" min="2" max="15">
+            </div>
+            
+            <div class="control-group">
+                <label>Stone Depth (mm)</label>
+                <input type="number" id="stoneDepth" value="4.0" step="0.1" min="1" max="10">
+            </div>
+
+            <h2>🦞 Prong Settings</h2>
+            
+            <div class="control-group">
+                <label>Number of Prongs</label>
+                <select id="prongCount">
+                    <option value="2">2 Prongs</option>
+                    <option value="4" selected>4 Prongs</option>
+                    <option value="6">6 Prongs</option>
+                    <option value="8">8 Prongs</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Prong Thickness at Base (mm)</label>
+                <input type="number" id="prongThicknessBase" value="0.5" step="0.05" min="0.2" max="2">
+            </div>
+            
+            <div class="control-group">
+                <label>Prong Thickness at Top (mm)</label>
+                <input type="number" id="prongThicknessTop" value="0.3" step="0.05" min="0.1" max="1.5">
+            </div>
+            
+            <div class="control-group">
+                <label>Setting Height (mm)</label>
+                <input type="number" id="settingHeight" value="3.0" step="0.1" min="1" max="10">
+                <small style="color: #aaa; display: block; margin-top: 5px;">Distance from ring to stone</small>
+            </div>
+
+            <h2>⭕ Ring Settings</h2>
+            
+            <div class="control-group">
+                <label>Ring Size (Inner Diameter mm)</label>
+                <input type="number" id="ringSize" value="17.0" step="0.5" min="14" max="22">
+            </div>
+            
+            <div class="control-group">
+                <label>Ring Band Thickness (mm)</label>
+                <input type="number" id="ringThickness" value="2.0" step="0.1" min="1" max="5">
+            </div>
+
+            <button onclick="generateRing()">✨ Generate Stone Setting</button>
+            
+            <h2>📐 Ring Orientation</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                <button class="secondary" onclick="setRingOrientation('vertical')" style="padding: 10px; font-size: 12px;">
+                    ⬆️ Vertical
+                </button>
+                <button class="secondary" onclick="setRingOrientation('horizontal')" style="padding: 10px; font-size: 12px;">
+                    ➡️ Horizontal
+                </button>
+            </div>
+            
+            <h2>Export</h2>
+            <button class="secondary" onclick="exportModel()">💾 Export as GLB</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+        let scene, camera, renderer, controls, transformControls;
+        let loadedObjects = [];
+        let selectedObject = null;
+        let gridHelper, axesHelper;
+        let raycaster, mouse;
+        let originalPositions = new Map();
+        let originalRotations = new Map();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(20, 20, 20);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth - 320, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('viewer').appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-10, -10, -5);
+            scene.add(directionalLight2);
+
+            // Grid
+            gridHelper = new THREE.GridHelper(40, 40, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Axes
+            axesHelper = new THREE.AxesHelper(15);
+            scene.add(axesHelper);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Transform Controls
+            transformControls = new TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', function(event) {
+                controls.enabled = !event.value;
+            });
+            transformControls.addEventListener('change', function() {
+                if (selectedObject) {
+                    updatePositionInputs();
+                }
+            });
+            scene.add(transformControls);
+
+            // Raycaster for selection
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Event listeners
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+            window.addEventListener('resize', onWindowResize, false);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = (window.innerWidth - 320) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth - 320, window.innerHeight);
+        }
+
+        function onMouseClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(loadedObjects, true);
+
+            if (intersects.length > 0) {
+                // Find the top-level object
+                let obj = intersects[0].object;
+                while (obj.parent && !loadedObjects.includes(obj)) {
+                    obj = obj.parent;
+                }
+                selectObject(obj);
+            }
+        }
+
+        function selectObject(obj) {
+            selectedObject = obj;
+            transformControls.attach(obj);
+            
+            document.getElementById('selectedInfo').style.display = 'block';
+            document.getElementById('selectedName').textContent = obj.name || 'Unnamed Object';
+            
+            updatePositionInputs();
+            updateStatus(`Selected: ${obj.name || 'Unnamed'}`);
+        }
+
+        function updatePositionInputs() {
+            if (selectedObject) {
+                document.getElementById('posX').value = selectedObject.position.x.toFixed(2);
+                document.getElementById('posY').value = selectedObject.position.y.toFixed(2);
+                document.getElementById('posZ').value = selectedObject.position.z.toFixed(2);
+                
+                // Update rotation inputs (convert from radians to degrees)
+                document.getElementById('rotX').value = THREE.MathUtils.radToDeg(selectedObject.rotation.x).toFixed(1);
+                document.getElementById('rotY').value = THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1);
+                document.getElementById('rotZ').value = THREE.MathUtils.radToDeg(selectedObject.rotation.z).toFixed(1);
+            }
+        }
+
+        window.updatePosition = function() {
+            if (selectedObject) {
+                selectedObject.position.x = parseFloat(document.getElementById('posX').value);
+                selectedObject.position.y = parseFloat(document.getElementById('posY').value);
+                selectedObject.position.z = parseFloat(document.getElementById('posZ').value);
+                updateStatus('Position updated');
+            }
+        };
+
+        window.updateRotation = function() {
+            if (selectedObject) {
+                // Convert from degrees to radians
+                selectedObject.rotation.x = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotX').value));
+                selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotY').value));
+                selectedObject.rotation.z = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotZ').value));
+                updateStatus('Rotation updated');
+            }
+        };
+
+        window.resetObjectPosition = function() {
+            if (selectedObject && originalPositions.has(selectedObject)) {
+                const original = originalPositions.get(selectedObject);
+                selectedObject.position.copy(original);
+                updatePositionInputs();
+                updateStatus('Position reset to original');
+            }
+        };
+
+        window.resetObjectRotation = function() {
+            if (selectedObject && originalRotations.has(selectedObject)) {
+                const original = originalRotations.get(selectedObject);
+                selectedObject.rotation.copy(original);
+                updatePositionInputs();
+                updateStatus('Rotation reset to original');
+            }
+        };
+
+        window.setTransformMode = function(mode) {
+            if (transformControls) {
+                transformControls.setMode(mode);
+                updateStatus(`Transform mode: ${mode}`);
+            }
+        };
+
+        window.generateSetting = function() {
+            document.getElementById('generatorParams').style.display = 'block';
+        };
+
+        window.hideGenerator = function() {
+            document.getElementById('generatorParams').style.display = 'none';
+        };
+
+        window.applyGeneration = function() {
+            // Clear existing objects
+            loadedObjects.forEach(obj => scene.remove(obj));
+            loadedObjects = [];
+            originalPositions.clear();
+            originalRotations.clear();
+
+            // Get parameters
+            const stoneDiameter = parseFloat(document.getElementById('stoneDiameter').value);
+            const stoneHeight = parseFloat(document.getElementById('stoneHeight').value);
+            const ringOuterRadius = parseFloat(document.getElementById('ringOuterRadius').value);
+            const ringTubeRadius = parseFloat(document.getElementById('ringTubeRadius').value);
+            const prongCount = parseInt(document.getElementById('prongCount').value);
+            const clawLength = parseFloat(document.getElementById('clawLength').value);
+            const clawThickness = parseFloat(document.getElementById('clawThickness').value);
+            const clawCurvature = parseFloat(document.getElementById('clawCurvature').value);
+            const clawInwardAngle = parseFloat(document.getElementById('clawInwardAngle').value);
+            const clawSpreadRadius = parseFloat(document.getElementById('clawSpreadRadius').value);
+            const curvePeakHeight = parseFloat(document.getElementById('curvePeakHeight').value);
+
+            // NEW LAYOUT: Match Python backend
+            // Ring: Horizontal tubular torus at Z=0
+            // Stone: Above ring at Y=ring_outer_radius, Z=0, rotated 90°
+            // Prongs: Connect horizontally from stone to ring
+
+            // Generate Tubular Ring (horizontal torus at Z=0)
+            const ringGeometry = new THREE.TorusGeometry(ringOuterRadius, ringTubeRadius, 32, 64);
+            const ringMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffcc00, 
+                metalness: 0.9, 
+                roughness: 0.1 
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.name = 'Ring_Base';
+            ring.position.set(0, 0, 0); // Center at origin, Z=0
+            // Ring is already horizontal (no rotation needed for torus)
+            scene.add(ring);
+            loadedObjects.push(ring);
+            originalPositions.set(ring, ring.position.clone());
+            originalRotations.set(ring, ring.rotation.clone());
+
+            // Generate Stone (ellipsoid above ring)
+            const stoneGeometry = new THREE.SphereGeometry(stoneDiameter / 2, 32, 32);
+            // Scale to make it an ellipsoid
+            stoneGeometry.scale(1, 1, stoneHeight / stoneDiameter);
+            const stoneMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4488ff, 
+                metalness: 0.3, 
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.9
+            });
+            const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
+            stone.name = 'Stone';
+            // Position: Y = ring_outer_radius + 0.5 (above ring), Z = 0 (same as ring)
+            stone.position.set(0, ringOuterRadius + 0.5, 0);
+            // Rotate 90° around X axis to orient perpendicular
+            stone.rotation.x = Math.PI / 2;
+            scene.add(stone);
+            loadedObjects.push(stone);
+            originalPositions.set(stone, stone.position.clone());
+            originalRotations.set(stone, stone.rotation.clone());
+
+            // Generate CLAWS/PRONGS - INVERTED PYRAMID style
+            // All claws start from ONE TIGHT POINT on ring, spread out to grasp stone
+            const clawRadius = clawThickness / 2;
+            const stoneY = ringOuterRadius + 0.5; // Stone's Y position (just above ring)
+            const stoneRadius = stoneDiameter / 2;
+
+            // Define the SINGLE ORIGIN point on ring where all claws converge
+            // Place it just above the ring surface (at Y = ringTubeRadius)
+            const clawOriginAngle = 0; // Front of ring (positive X direction)
+            const clawOriginX = ringOuterRadius * Math.cos(clawOriginAngle);
+            const clawOriginY = ringTubeRadius; // Just above ring surface, not at Y=0
+            const clawOriginZ = ringOuterRadius * Math.sin(clawOriginAngle);
+
+            // Calculate claw end positions - spread symmetrically around stone perimeter
+            for (let i = 0; i < prongCount; i++) {
+                const stoneAngle = (i / prongCount) * Math.PI * 2;
+                
+                // START point: ALL claws converge at ONE SINGLE POINT on ring (absolute coordinates)
+                const clawStartX = clawOriginX;
+                const clawStartY = clawOriginY; 
+                const clawStartZ = clawOriginZ;
+                
+                // END point: Each claw spreads to grasp stone at different positions
+                // Stone is at (0, stoneY, 0), rotated 90° so perimeter is in XZ plane
+                const stoneGraspX = stoneRadius * Math.cos(stoneAngle) * 0.85; // 85% to grasp securely
+                const stoneGraspY = stoneY;
+                const stoneGraspZ = stoneRadius * Math.sin(stoneAngle) * 0.85;
+                
+                // Calculate direction vector from origin to grasp point
+                const dx = stoneGraspX - clawStartX;
+                const dy = stoneGraspY - clawStartY;
+                const dz = stoneGraspZ - clawStartZ;
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                
+                // Create CURVED claw from single origin spreading to stone
+                // Curve upward and outward for natural jewelry look
+                const midX = clawStartX + dx * 0.5;
+                const midY = clawStartY + dy * 0.5;
+                const midZ = clawStartZ + dz * 0.5;
+                
+                // Control points for smooth spread with DOWNWARD curve (basket shape \/)
+                const ctrl1X = clawStartX + dx * 0.25;
+                const ctrl1Y = clawStartY + dy * 0.3 - curvePeakHeight * 0.5; // Curve DOWN
+                const ctrl1Z = clawStartZ + dz * 0.25;
+                
+                const ctrl2X = clawStartX + dx * 0.75;
+                const ctrl2Y = clawStartY + dy * 0.7 - curvePeakHeight; // Curve DOWN
+                const ctrl2Z = clawStartZ + dz * 0.75;
+
+                const curve = new THREE.CubicBezierCurve3(
+                    new THREE.Vector3(clawStartX, clawStartY, clawStartZ),  // Single origin point
+                    new THREE.Vector3(ctrl1X, ctrl1Y, ctrl1Z),  // Curve upward slightly
+                    new THREE.Vector3(ctrl2X, ctrl2Y, ctrl2Z),  // Continue spreading outward
+                    new THREE.Vector3(stoneGraspX, stoneGraspY, stoneGraspZ)  // Grasp stone
+                );
+
+                // Create tube geometry along the curve
+                const tubeGeometry = new THREE.TubeGeometry(
+                    curve, 
+                    24,  // segments along curve
+                    clawRadius, 
+                    8,  // radial segments
+                    false
+                );
+                const clawMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xcccccc, 
+                    metalness: 0.9, 
+                    roughness: 0.1 
+                });
+                const claw = new THREE.Mesh(tubeGeometry, clawMaterial);
+                claw.name = `Claw_${i + 1}`;
+
+                scene.add(claw);
+                loadedObjects.push(claw);
+                originalPositions.set(claw, claw.position.clone());
+                originalRotations.set(claw, claw.rotation.clone());
+            }
+
+            updateObjectList();
+            hideGenerator();
+            updateStatus(`Generated: Ring + Stone + ${prongCount} Claws`);
+        };
+
+        window.loadModel = function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.glb,.gltf';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const loader = new GLTFLoader();
+                        loader.parse(event.target.result, '', function(gltf) {
+                            // Clear existing objects
+                            loadedObjects.forEach(obj => scene.remove(obj));
+                            loadedObjects = [];
+                            originalPositions.clear();
+                            
+                            // Add new objects
+                            gltf.scene.traverse((child) => {
+                                if (child.isMesh) {
+                                    const mesh = child.clone();
+                                    mesh.name = child.name || `Object_${loadedObjects.length}`;
+                                    scene.add(mesh);
+                                    loadedObjects.push(mesh);
+                                    originalPositions.set(mesh, mesh.position.clone());
+                                    originalRotations.set(mesh, mesh.rotation.clone());
+                                }
+                            });
+
+                            updateObjectList();
+                            updateStatus(`Loaded ${loadedObjects.length} objects`);
+                        });
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            };
+            input.click();
+        };
+
+        // Load a GLB from a remote URL and parse it into the scene
+        window.loadFromURL = async function() {
+            const url = document.getElementById('glbUrlInput').value.trim();
+            if (!url) {
+                updateStatus('Please enter a GLB URL');
+                return;
+            }
+            try {
+                updateStatus('Downloading GLB...');
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(`Failed to fetch: ${resp.status}`);
+                const arrayBuffer = await resp.arrayBuffer();
+                const loader = new GLTFLoader();
+                loader.parse(arrayBuffer, '', function(gltf) {
+                    // Clear existing objects
+                    loadedObjects.forEach(obj => scene.remove(obj));
+                    loadedObjects = [];
+                    originalPositions.clear();
+                    originalRotations.clear();
+
+                    gltf.scene.traverse((child) => {
+                        if (child.isMesh) {
+                            const mesh = child.clone();
+                            mesh.name = child.name || `Object_${loadedObjects.length}`;
+                            scene.add(mesh);
+                            loadedObjects.push(mesh);
+                            originalPositions.set(mesh, mesh.position.clone());
+                            originalRotations.set(mesh, mesh.rotation.clone());
+                        }
+                    });
+                    updateObjectList();
+                    updateStatus(`Loaded ${loadedObjects.length} objects from URL`);
+                });
+            } catch (e) {
+                updateStatus(`Load failed: ${e.message}`);
+                console.error(e);
+            }
+        };
+
+        // Populate generator fields from a loaded model (best-effort)
+        window.syncModelToGenerator = function() {
+            // Try to find named parts
+            const stoneObj = loadedObjects.find(o => /stone/i.test(o.name));
+            const ringObj = loadedObjects.find(o => /ring/i.test(o.name));
+            const clawObj = loadedObjects.find(o => /claw|prong/i.test(o.name));
+
+            if (stoneObj) {
+                const box = new THREE.Box3().setFromObject(stoneObj);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const diameter = Math.max(size.x, size.y);
+                const height = size.z;
+                document.getElementById('stoneDiameter').value = diameter.toFixed(2);
+                document.getElementById('stoneHeight').value = height.toFixed(2);
+            }
+            if (ringObj) {
+                const box = new THREE.Box3().setFromObject(ringObj);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                // approximate outer radius as half of X-size
+                document.getElementById('ringOuterRadius').value = (size.x / 2).toFixed(2);
+                // approximate tube radius as half of Z-size
+                document.getElementById('ringTubeRadius').value = (size.z / 2).toFixed(2);
+            }
+            if (clawObj) {
+                const box = new THREE.Box3().setFromObject(clawObj);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                document.getElementById('clawLength').value = size.z.toFixed(2);
+                document.getElementById('clawThickness').value = Math.max(size.x, size.y).toFixed(2);
+            }
+            updateStatus('Synchronized generator parameters from loaded model (best-effort)');
+        };
+
+        // Apply current generator parameters to existing loaded objects (best-effort)
+        window.applyParamsToLoaded = function() {
+            if (loadedObjects.length === 0) {
+                updateStatus('No loaded objects to apply parameters to');
+                return;
+            }
+            const stoneDiameter = parseFloat(document.getElementById('stoneDiameter').value);
+            const stoneHeight = parseFloat(document.getElementById('stoneHeight').value);
+            const ringOuterRadius = parseFloat(document.getElementById('ringOuterRadius').value);
+            const ringTubeRadius = parseFloat(document.getElementById('ringTubeRadius').value);
+            const clawLength = parseFloat(document.getElementById('clawLength').value);
+            const clawThickness = parseFloat(document.getElementById('clawThickness').value);
+
+            const stoneObj = loadedObjects.find(o => /stone/i.test(o.name));
+            const ringObj = loadedObjects.find(o => /ring/i.test(o.name));
+            const clawObjs = loadedObjects.filter(o => /claw|prong/i.test(o.name));
+
+            if (stoneObj) {
+                const box = new THREE.Box3().setFromObject(stoneObj);
+                const size = new THREE.Vector3(); box.getSize(size);
+                const curDiameter = Math.max(size.x, size.y);
+                const curHeight = size.z;
+                const sx = stoneDiameter / curDiameter;
+                const sz = stoneHeight / curHeight;
+                stoneObj.scale.set(sx, sx, sz);
+                stoneObj.position.set(0, 0, clawLength * 0.7 + stoneHeight / 2);
+            }
+            if (ringObj) {
+                const box = new THREE.Box3().setFromObject(ringObj);
+                const size = new THREE.Vector3(); box.getSize(size);
+                const curOuter = size.x / 2;
+                const s = ringOuterRadius / curOuter;
+                ringObj.scale.set(s, s, s);
+                ringObj.position.set(0, 0, -1.2);
+                ringObj.rotation.x = Math.PI / 2;
+            }
+            if (clawObjs && clawObjs.length > 0) {
+                clawObjs.forEach(c => {
+                    const box = new THREE.Box3().setFromObject(c);
+                    const size = new THREE.Vector3(); box.getSize(size);
+                    const curLen = size.z;
+                    const curTh = Math.max(size.x, size.y);
+                    const sz = clawLength / curLen;
+                    const sxy = clawThickness / curTh;
+                    c.scale.set(sxy, sxy, sz);
+                });
+            }
+            updateStatus('Applied generator parameters to loaded objects (best-effort)');
+        };
+
+        function updateObjectList() {
+            const select = document.getElementById('objectList');
+            select.innerHTML = '';
+            loadedObjects.forEach((obj, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = obj.name;
+                select.appendChild(option);
+            });
+            document.getElementById('objectSelector').style.display = 'block';
+        }
+
+        window.selectObjectFromList = function() {
+            const index = parseInt(document.getElementById('objectList').value);
+            if (loadedObjects[index]) {
+                selectObject(loadedObjects[index]);
+            }
+        };
+
+        window.exportPositions = function() {
+            const transforms = {};
+            loadedObjects.forEach(obj => {
+                transforms[obj.name] = {
+                    position: {
+                        x: parseFloat(obj.position.x.toFixed(3)),
+                        y: parseFloat(obj.position.y.toFixed(3)),
+                        z: parseFloat(obj.position.z.toFixed(3))
+                    },
+                    rotation: {
+                        x: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.x).toFixed(2)),
+                        y: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.y).toFixed(2)),
+                        z: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.z).toFixed(2))
+                    }
+                };
+            });
+            
+            const text = JSON.stringify(transforms, null, 2);
+            navigator.clipboard.writeText(text).then(() => {
+                updateStatus('Transforms copied to clipboard!');
+                document.getElementById('allPositions').textContent = text;
+                document.getElementById('positionData').style.display = 'block';
+            });
+        };
+
+        window.downloadPositions = function() {
+            const transforms = {};
+            loadedObjects.forEach(obj => {
+                transforms[obj.name] = {
+                    position: {
+                        x: parseFloat(obj.position.x.toFixed(3)),
+                        y: parseFloat(obj.position.y.toFixed(3)),
+                        z: parseFloat(obj.position.z.toFixed(3))
+                    },
+                    rotation: {
+                        x: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.x).toFixed(2)),
+                        y: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.y).toFixed(2)),
+                        z: parseFloat(THREE.MathUtils.radToDeg(obj.rotation.z).toFixed(2))
+                    }
+                };
+            });
+            
+            const blob = new Blob([JSON.stringify(transforms, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'object_transforms.json';
+            a.click();
+            updateStatus('Transform file downloaded');
+        };
+
+        window.resetCamera = function() {
+            camera.position.set(20, 20, 20);
+            camera.lookAt(0, 0, 0);
+            controls.reset();
+            updateStatus('Camera reset');
+        };
+
+        window.toggleGrid = function() {
+            gridHelper.visible = !gridHelper.visible;
+            updateStatus(`Grid ${gridHelper.visible ? 'shown' : 'hidden'}`);
+        };
+
+        window.toggleAxes = function() {
+            axesHelper.visible = !axesHelper.visible;
+            updateStatus(`Axes ${axesHelper.visible ? 'shown' : 'hidden'}`);
+        };
+
+        window.checkCollisions = function() {
+            const collisions = [];
+            
+            // Check all pairs of objects for bounding box intersections
+            for (let i = 0; i < loadedObjects.length; i++) {
+                for (let j = i + 1; j < loadedObjects.length; j++) {
+                    const obj1 = loadedObjects[i];
+                    const obj2 = loadedObjects[j];
+                    
+                    // Create bounding boxes
+                    const box1 = new THREE.Box3().setFromObject(obj1);
+                    const box2 = new THREE.Box3().setFromObject(obj2);
+                    
+                    // Check if boxes intersect
+                    if (box1.intersectsBox(box2)) {
+                        // Calculate overlap distance
+                        const center1 = new THREE.Vector3();
+                        const center2 = new THREE.Vector3();
+                        box1.getCenter(center1);
+                        box2.getCenter(center2);
+                        const distance = center1.distanceTo(center2);
+                        
+                        // Calculate penetration depth
+                        const size1 = new THREE.Vector3();
+                        const size2 = new THREE.Vector3();
+                        box1.getSize(size1);
+                        box2.getSize(size2);
+                        const maxDist = (size1.length() + size2.length()) / 2;
+                        const penetration = maxDist - distance;
+                        
+                        collisions.push({
+                            obj1: obj1.name,
+                            obj2: obj2.name,
+                            distance: distance.toFixed(3),
+                            penetration: penetration.toFixed(3)
+                        });
+                        
+                        // Highlight colliding objects temporarily
+                        const originalColor1 = obj1.material.color.getHex();
+                        const originalColor2 = obj2.material.color.getHex();
+                        obj1.material.color.setHex(0xff0000);
+                        obj2.material.color.setHex(0xff0000);
+                        
+                        setTimeout(() => {
+                            obj1.material.color.setHex(originalColor1);
+                            obj2.material.color.setHex(originalColor2);
+                        }, 2000);
+                    }
+                }
+            }
+            
+            // Display results
+            if (collisions.length > 0) {
+                let collisionText = `Found ${collisions.length} collision(s):\n\n`;
+                collisions.forEach((c, index) => {
+                    collisionText += `${index + 1}. ${c.obj1} ↔ ${c.obj2}\n`;
+                    collisionText += `   Distance: ${c.distance} mm\n`;
+                    collisionText += `   Penetration: ${c.penetration} mm\n\n`;
+                });
+                document.getElementById('collisionList').textContent = collisionText;
+                document.getElementById('collisionInfo').style.display = 'block';
+                updateStatus(`⚠️ ${collisions.length} collision(s) detected!`);
+            } else {
+                document.getElementById('collisionList').textContent = '✅ No collisions detected!\nAll objects are properly spaced.';
+                document.getElementById('collisionInfo').style.display = 'block';
+                document.getElementById('collisionInfo').style.background = '#204a20';
+                document.getElementById('collisionInfo').style.borderColor = '#55ff55';
+                updateStatus('✅ No collisions detected');
+                
+                setTimeout(() => {
+                    document.getElementById('collisionInfo').style.background = '#4a2020';
+                    document.getElementById('collisionInfo').style.borderColor = '#ff5555';
+                }, 3000);
+            }
+        };
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            setTimeout(() => {
+                document.getElementById('status').textContent = 'Click on objects to select and drag them';
+            }, 3000);
+        }
+
+        // Load GLB template from server
+        window.loadTemplate = async function(templateName) {
+            const glbPath = `/output/diamond_ring_${templateName}.glb`;
+            const loader = new GLTFLoader();
+            loader.load(glbPath, (gltf) => {
+                // Clear existing objects
+                loadedObjects.forEach(obj => scene.remove(obj));
+                loadedObjects = [];
+                originalPositions.clear();
+                originalRotations.clear();
+
+                gltf.scene.traverse((child) => {
+                    if (child.isMesh) {
+                        const mesh = child.clone();
+                        mesh.name = child.name || `Object_${loadedObjects.length}`;
+
+                        // Apply material coloring based on mesh name
+                        if (mesh.name.toLowerCase().includes('stone')) {
+                            mesh.material = new THREE.MeshStandardMaterial({
+                                color: 0x4488ff,
+                                metalness: 0.3,
+                                roughness: 0.1,
+                                transparent: true,
+                                opacity: 0.9
+                            });
+                        } else if (mesh.name.toLowerCase().includes('ring')) {
+                            mesh.material = new THREE.MeshStandardMaterial({
+                                color: 0xffcc00,
+                                metalness: 0.9,
+                                roughness: 0.1
+                            });
+                        } else if (mesh.name.toLowerCase().includes('claw') || mesh.name.toLowerCase().includes('prong')) {
+                            mesh.material = new THREE.MeshStandardMaterial({
+                                color: 0xcccccc,
+                                metalness: 0.9,
+                                roughness: 0.1
+                            });
+                        }
+
+                        scene.add(mesh);
+                        loadedObjects.push(mesh);
+                        originalPositions.set(mesh, mesh.position.clone());
+                        originalRotations.set(mesh, mesh.rotation.clone());
+                    }
+                });
+
+                updateObjectList();
+                updateStatus(`Loaded template: ${templateName}`);
+            }, undefined, (error) => {
+                updateStatus(`Failed to load template: ${templateName}`);
+                console.error(error);
+            });
+        };
+
+        // Create Princess Cut Diamond Geometry (square with pointed pavilion)
+        function createPrincessCutDiamond(size, depth) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            
+            // Princess cut proportions
+            const tableSize = size * 0.65;      // Table is ~65% of width
+            const crownHeight = depth * 0.30;   // Crown is ~30% of total depth
+            const pavilionDepth = depth * 0.70; // Pavilion is ~70% of total depth
+            
+            // Key points - CORRECT orientation (table at top, tip at bottom)
+            const tableY = crownHeight;        // Table at top
+            const girdleY = 0;                 // Girdle at center
+            const culetY = -pavilionDepth;     // Culet (tip) at bottom
+            
+            // Create vertices
+            // 1. Table center
+            vertices.push(0, tableY, 0);
+            const tableCenterIdx = 0;
+            
+            // 2. Table corners (square)
+            const halfTable = tableSize / 2;
+            vertices.push(halfTable, tableY, halfTable);   // 1
+            vertices.push(-halfTable, tableY, halfTable);  // 2
+            vertices.push(-halfTable, tableY, -halfTable); // 3
+            vertices.push(halfTable, tableY, -halfTable);  // 4
+            const tableStartIdx = 1;
+            
+            // 3. Girdle corners (square)
+            const halfGirdle = size / 2;
+            vertices.push(halfGirdle, girdleY, halfGirdle);   // 5
+            vertices.push(-halfGirdle, girdleY, halfGirdle);  // 6
+            vertices.push(-halfGirdle, girdleY, -halfGirdle); // 7
+            vertices.push(halfGirdle, girdleY, -halfGirdle);  // 8
+            const girdleStartIdx = 5;
+            
+            // 4. Pavilion points (halfway to culet)
+            const halfPavilion = size * 0.3;
+            vertices.push(halfPavilion, culetY * 0.5, halfPavilion);   // 9
+            vertices.push(-halfPavilion, culetY * 0.5, halfPavilion);  // 10
+            vertices.push(-halfPavilion, culetY * 0.5, -halfPavilion); // 11
+            vertices.push(halfPavilion, culetY * 0.5, -halfPavilion);  // 12
+            const pavilionStartIdx = 9;
+            
+            // 5. Culet (point at top)
+            vertices.push(0, culetY, 0);
+            const culetIdx = 13;
+            
+            // Create faces - Table
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                indices.push(tableCenterIdx, tableStartIdx + i, tableStartIdx + next);
+            }
+            
+            // Crown facets (table to girdle)
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                indices.push(tableStartIdx + i, girdleStartIdx + i, tableStartIdx + next);
+                indices.push(tableStartIdx + next, girdleStartIdx + i, girdleStartIdx + next);
+            }
+            
+            // Pavilion facets (girdle to pavilion points)
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                indices.push(girdleStartIdx + i, pavilionStartIdx + i, girdleStartIdx + next);
+                indices.push(girdleStartIdx + next, pavilionStartIdx + i, pavilionStartIdx + next);
+            }
+            
+            // Pavilion to culet
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                indices.push(pavilionStartIdx + i, culetIdx, pavilionStartIdx + next);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            return geometry;
+        }
+
+        // Create Radiant Cut Diamond Geometry (rectangular with cut corners)
+        function createRadiantCutDiamond(length, width, depth) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            
+            // Radiant cut proportions
+            const tableLength = length * 0.65;
+            const tableWidth = width * 0.65;
+            const crownHeight = depth * 0.32;
+            const pavilionDepth = depth * 0.68;
+            const cornerCut = Math.min(length, width) * 0.15; // 15% corner cut
+            
+            // Key points - CORRECT orientation (table at top, tip at bottom)
+            const tableY = crownHeight;
+            const girdleY = 0;
+            const culetY = -pavilionDepth;
+            
+            const halfL = length / 2;
+            const halfW = width / 2;
+            const halfTL = tableLength / 2;
+            const halfTW = tableWidth / 2;
+            
+            // Create vertices
+            // 1. Table center
+            vertices.push(0, tableY, 0);
+            const tableCenterIdx = 0;
+            
+            // 2. Table octagon (8 points - rectangle with cut corners)
+            const tableStartIdx = vertices.length / 3;
+            vertices.push(halfTL - cornerCut * 0.5, tableY, halfTW);
+            vertices.push(-halfTL + cornerCut * 0.5, tableY, halfTW);
+            vertices.push(-halfTL, tableY, halfTW - cornerCut * 0.5);
+            vertices.push(-halfTL, tableY, -halfTW + cornerCut * 0.5);
+            vertices.push(-halfTL + cornerCut * 0.5, tableY, -halfTW);
+            vertices.push(halfTL - cornerCut * 0.5, tableY, -halfTW);
+            vertices.push(halfTL, tableY, -halfTW + cornerCut * 0.5);
+            vertices.push(halfTL, tableY, halfTW - cornerCut * 0.5);
+            
+            // 3. Girdle octagon
+            const girdleStartIdx = vertices.length / 3;
+            vertices.push(halfL - cornerCut, girdleY, halfW);
+            vertices.push(-halfL + cornerCut, girdleY, halfW);
+            vertices.push(-halfL, girdleY, halfW - cornerCut);
+            vertices.push(-halfL, girdleY, -halfW + cornerCut);
+            vertices.push(-halfL + cornerCut, girdleY, -halfW);
+            vertices.push(halfL - cornerCut, girdleY, -halfW);
+            vertices.push(halfL, girdleY, -halfW + cornerCut);
+            vertices.push(halfL, girdleY, halfW - cornerCut);
+            
+            // 4. Culet
+            vertices.push(0, culetY, 0);
+            const culetIdx = (vertices.length / 3) - 1;
+            
+            // Create faces - Table
+            for (let i = 0; i < 8; i++) {
+                const next = (i + 1) % 8;
+                indices.push(tableCenterIdx, tableStartIdx + i, tableStartIdx + next);
+            }
+            
+            // Crown facets
+            for (let i = 0; i < 8; i++) {
+                const next = (i + 1) % 8;
+                indices.push(tableStartIdx + i, girdleStartIdx + i, tableStartIdx + next);
+                indices.push(tableStartIdx + next, girdleStartIdx + i, girdleStartIdx + next);
+            }
+            
+            // Pavilion facets
+            for (let i = 0; i < 8; i++) {
+                const next = (i + 1) % 8;
+                indices.push(girdleStartIdx + i, culetIdx, girdleStartIdx + next);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            return geometry;
+        }
+
+        // Create Brilliant Cut Diamond Geometry
+        function createBrilliantCutDiamond(radius, depth) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            
+            // Brilliant cut proportions (simplified)
+            const tableRadius = radius * 0.53;  // Table is ~53% of diameter
+            const crownHeight = depth * 0.35;   // Crown is ~35% of total depth
+            const pavilionDepth = depth * 0.65; // Pavilion is ~65% of total depth
+            const girdleRadius = radius;
+            
+            // Key points for brilliant cut - CORRECT orientation
+            // Table (flat base) at top, Culet (tip) at bottom
+            const tableY = crownHeight;        // Table at top (positive Y)
+            const girdleY = 0;                 // Girdle at center
+            const culetY = -pavilionDepth;     // Culet (tip) at bottom (negative Y)
+            
+            // Number of facets around - REDUCED for larger, more visible facets
+            const segments = 8; // 8 segments for clearer, larger facets
+            
+            // Create vertices
+            // 1. Table center
+            vertices.push(0, tableY, 0);
+            const tableCenterIdx = 0;
+            
+            // 2. Table edge (octagonal)
+            const tableSegments = 8;
+            const tableStartIdx = vertices.length / 3;
+            for (let i = 0; i < tableSegments; i++) {
+                const angle = (i / tableSegments) * Math.PI * 2;
+                vertices.push(
+                    tableRadius * Math.cos(angle),
+                    tableY,
+                    tableRadius * Math.sin(angle)
+                );
+            }
+            
+            // 3. Crown-Girdle edge (star facets and bezel facets)
+            const crownStartIdx = vertices.length / 3;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                vertices.push(
+                    girdleRadius * Math.cos(angle) * 0.85,
+                    tableY * 0.5,
+                    girdleRadius * Math.sin(angle) * 0.85
+                );
+            }
+            
+            // 4. Girdle (widest part)
+            const girdleStartIdx = vertices.length / 3;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                vertices.push(
+                    girdleRadius * Math.cos(angle),
+                    girdleY,
+                    girdleRadius * Math.sin(angle)
+                );
+            }
+            
+            // 5. Pavilion facets
+            const pavilionStartIdx = vertices.length / 3;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                vertices.push(
+                    girdleRadius * Math.cos(angle) * 0.5,
+                    culetY * 0.5,
+                    girdleRadius * Math.sin(angle) * 0.5
+                );
+            }
+            
+            // 6. Culet (bottom point)
+            vertices.push(0, culetY, 0);
+            const culetIdx = (vertices.length / 3) - 1;
+            
+            // Create faces
+            // Table facets (from center to table edge)
+            for (let i = 0; i < tableSegments; i++) {
+                const next = (i + 1) % tableSegments;
+                indices.push(
+                    tableCenterIdx,
+                    tableStartIdx + i,
+                    tableStartIdx + next
+                );
+            }
+            
+            // Crown facets (table edge to crown-girdle)
+            for (let i = 0; i < tableSegments; i++) {
+                const next = (i + 1) % tableSegments;
+                const crownIdx = Math.floor((i / tableSegments) * segments);
+                const crownNext = Math.floor((next / tableSegments) * segments);
+                
+                indices.push(
+                    tableStartIdx + i,
+                    crownStartIdx + crownIdx,
+                    tableStartIdx + next
+                );
+                indices.push(
+                    tableStartIdx + next,
+                    crownStartIdx + crownIdx,
+                    crownStartIdx + crownNext
+                );
+            }
+            
+            // Star and bezel facets (crown to girdle)
+            for (let i = 0; i < segments; i++) {
+                const next = (i + 1) % segments;
+                indices.push(
+                    crownStartIdx + i,
+                    girdleStartIdx + i,
+                    crownStartIdx + next
+                );
+                indices.push(
+                    crownStartIdx + next,
+                    girdleStartIdx + i,
+                    girdleStartIdx + next
+                );
+            }
+            
+            // Pavilion facets (girdle to pavilion)
+            for (let i = 0; i < segments; i++) {
+                const next = (i + 1) % segments;
+                indices.push(
+                    girdleStartIdx + i,
+                    pavilionStartIdx + i,
+                    girdleStartIdx + next
+                );
+                indices.push(
+                    girdleStartIdx + next,
+                    pavilionStartIdx + i,
+                    pavilionStartIdx + next
+                );
+            }
+            
+            // Pavilion to culet (bottom point)
+            for (let i = 0; i < segments; i++) {
+                const next = (i + 1) % segments;
+                indices.push(
+                    pavilionStartIdx + i,
+                    culetIdx,
+                    pavilionStartIdx + next
+                );
+            }
+            
+            // Set geometry attributes
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            return geometry;
+        }
+
+        // Simple Diamond Ring Generator - Creates a working ring every time
+        // ALL MEASUREMENTS ARE IN MILLIMETERS (mm)
+        // This ensures accurate jewelry dimensions for manufacturing
+        window.createDiamondRingTemplate = function(templateConfig) {
+            // Clear existing objects
+            loadedObjects.forEach(obj => scene.remove(obj));
+            loadedObjects = [];
+            originalPositions.clear();
+            originalRotations.clear();
+
+            // Default simple configuration
+            // ALL VALUES IN MILLIMETERS (mm) - Standard jewelry measurements
+            const config = templateConfig || {
+                ringSize: 9.0,      // Ring outer radius in mm (US size ~6)
+                ringThickness: 1.0, // Ring tube radius in mm
+                stoneSize: 6.0,     // Stone diameter in mm (0.75 carat equivalent)
+                prongCount: 4,      // Number of prongs
+                prongHeight: 4.0,   // How high prongs extend in mm
+                material: 'gold'    // gold, platinum, silver
+            };
+
+            // Material colors
+            const materialColors = {
+                gold: 0xffcc00,
+                platinum: 0xf8f8ff,
+                silver: 0xc0c0c0
+            };
+
+            // 1. Create Ring Band - Simple torus
+            const ringGeometry = new THREE.TorusGeometry(config.ringSize, config.ringThickness, 16, 32);
+            const ringMaterial = new THREE.MeshStandardMaterial({
+                color: materialColors[config.material] || materialColors.gold,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.name = 'Ring';
+            ring.position.set(0, 0, 0);
+            scene.add(ring);
+            loadedObjects.push(ring);
+            originalPositions.set(ring, ring.position.clone());
+            originalRotations.set(ring, ring.rotation.clone());
+
+            // Calculate prong positions and stone size
+            // Centerpiece is at Y = ringSize (radius distance above center)
+            const centerpieceDistance = config.ringSize; // Radius distance
+            const centerpieceY = centerpieceDistance;
+            
+            // Stone Y position = radius + ring tube thickness + height above ring
+            const stoneHeightAboveRing = config.stoneHeightAboveRing || 3.0; // Default 3mm above ring
+            const stoneY = config.ringSize + config.ringThickness + stoneHeightAboveRing;
+            
+            // Calculate prong spread at stone height
+            // Prongs spread from centerpiece (0, centerpieceY, 0) to stone edge
+            // At stone height, we need to find where prongs intersect
+            // Using geometry: prongs radiate from centerpiece at equal angles
+            
+            // Distance in Y from centerpiece to stone
+            const yDiff = stoneY - centerpieceY;
+            
+            // For each prong, calculate X/Z spread at stone height
+            // Prongs spread outward as they go up in Y
+            // The spread angle determines the X/Z position at stone height
+            
+            // Calculate stone radius that fits inside prongs (small clearance to prevent overlap)
+            const prongThicknessBase = (config.prongThicknessBase && parseFloat(config.prongThicknessBase)) || 0.4; // mm
+            const prongThicknessTop = (config.prongThicknessTop && parseFloat(config.prongThicknessTop)) || 0.3; // mm
+            const clearance = 0.25; // Small 0.25mm gap between prong tips and stone
+            
+            // Maximum radius from prong spread pattern
+            // For n prongs evenly distributed, the inscribed circle radius is:
+            // r = R * cos(π/n), where R is the prong spread radius
+            const prongSpreadRadius = config.stoneSize / 2; // Use configured stone size as target spread
+            
+            // Stone radius (at widest girdle point)
+            // Add 0.2mm clearance between prongs and stone
+            const stoneRadius = prongSpreadRadius - 0.2; // Prongs positioned 0.2mm away from stone edge
+            const stoneDepth = config.stoneDepth || stoneRadius * 1.2;
+            
+            // Calculate stone bounds (brilliant cut has table at top, culet at bottom)
+            const crownHeight = stoneDepth * 0.35;  // Crown (top part)
+            const pavilionDepth = stoneDepth * 0.65; // Pavilion (bottom part, tip)
+            const stoneBottomY = stoneY - pavilionDepth; // Bottom of stone (culet/tip)
+            const stoneTopY = stoneY + crownHeight;  // Top of stone (table/base)
+            const stoneGirdleY = stoneY;  // Girdle at center (widest point)
+            
+            // Minimum safe distance to prevent overlap when stone is low
+            const minSafeHeight = 1.5; // 1.5mm minimum
+            const stoneIsLow = (stoneBottomY - centerpieceY) < minSafeHeight;
+            
+            // Prongs must avoid the girdle (widest part) - add extra clearance
+            // If stone is low, increase avoidance radius to prevent overlap
+            const extraClearance = stoneIsLow ? prongThicknessBase * 1.5 : prongThicknessBase;
+            const girdleAvoidanceRadius = stoneRadius + extraClearance; // Prongs stay outside girdle
+
+            // 2. Create Stone - Different shapes based on config
+            let stoneGeometry;
+            const stoneShape = config.stoneShape || 'round';
+            
+            if (stoneShape === 'princess') {
+                // Princess cut - square shape
+                const squareSize = stoneRadius * 2; // Convert radius to square size
+                stoneGeometry = createPrincessCutDiamond(squareSize, stoneDepth);
+            } else if (stoneShape === 'radiant') {
+                // Radiant cut - rectangular with cut corners
+                const stoneLength = config.stoneLength || stoneRadius * 2;
+                const stoneWidth = config.stoneWidth || stoneRadius * 2;
+                stoneGeometry = createRadiantCutDiamond(stoneLength, stoneWidth, stoneDepth);
+            } else {
+                // Round/Brilliant cut (default)
+                stoneGeometry = createBrilliantCutDiamond(stoneRadius, stoneDepth);
+            }
+            
+            const stoneMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                metalness: 0.1,
+                roughness: 0.05,
+                transparent: true,
+                opacity: 0.95,
+                envMapIntensity: 1.5,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                flatShading: true  // Show facets instead of smooth surface
+            });
+            const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
+            stone.name = 'Stone';
+            stone.position.set(0, stoneY, 0); // Position at calculated height
+            
+            // Sync rotation with prong angular distribution
+            // Offset by half the prong angle to align with prong pattern
+            const prongAngleOffset = (Math.PI * 2) / config.prongCount / 2;
+            stone.rotation.y = prongAngleOffset; // Rotate around Y-axis (vertical)
+            
+            scene.add(stone);
+            loadedObjects.push(stone);
+            originalPositions.set(stone, stone.position.clone());
+            originalRotations.set(stone, stone.rotation.clone());
+
+            // 3. Create Prongs - V-shaped flat claws converging at centerpiece
+            const prongMaterial = new THREE.MeshStandardMaterial({
+                color: materialColors[config.material] || materialColors.gold,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            
+            // Centerpiece positioned at radius distance from ring center (already calculated above)
+            const centerpiecePoint = new THREE.Vector3(0, centerpieceY, 0); // Default: vertical (Y-axis up)
+            
+            // Tapered prong dimensions: pyramid/triangle shape (CLAW-LIKE)
+            // Base dimensions (at centerpiece) - controlled by prongThicknessBase
+            // CLAW shape: narrow edge tangent to ring circle, wider surface faces radially
+            const clawWidthBase = prongThicknessBase * 0.5;  // Base width (narrow edge, tangent) - 50% of thickness
+            const clawDepthBase = prongThicknessBase;        // Base depth (wider surface, radial) - full thickness
+            
+            // Top dimensions (at stone) - controlled by prongThicknessTop
+            const clawWidthTop = prongThicknessTop * 0.5;    // Top width (narrow edge, tangent) - same 50% ratio
+            const clawDepthTop = prongThicknessTop;          // Top depth (wider surface, radial) - full thickness
+
+            // Array to hold all claw geometries for merging
+            const clawGeometries = [];
+
+            for (let i = 0; i < config.prongCount; i++) {
+                const angle = (i / config.prongCount) * Math.PI * 2;
+
+                // End point near stone with clearance - use prongSpreadRadius for positioning
+                const endRadius = prongSpreadRadius; // Prongs positioned at spread radius (0.35mm away from stone)
+                const endX = endRadius * Math.cos(angle);
+                const endZ = endRadius * Math.sin(angle);
+                const endY = stoneY; // At stone center height
+                
+                // Start point at centerpiece
+                const startPoint = centerpiecePoint.clone();
+                const endPoint = new THREE.Vector3(endX, endY, endZ);
+                
+                // Calculate prong length
+                const prongLength = startPoint.distanceTo(endPoint);
+                
+                // Create tapered prong shape - we'll create the shape at the base and use a loft/taper
+                // For now, create base shape and we'll handle tapering with vertex manipulation
+                const shape = new THREE.Shape();
+                const halfWidth = clawWidthBase / 2;
+                const halfDepth = clawDepthBase / 2;
+                const radius = Math.min(halfDepth * 0.8, halfWidth * 0.3); // Larger rounded edges for smooth ends
+                
+                // Create shape with rounded corners (CLAW orientation)
+                // X-axis: width (narrow edge, tangential around ring)
+                // Y-axis: depth (wider surface, radial toward/away from stone)
+                shape.moveTo(-halfWidth + radius, -halfDepth);
+                shape.lineTo(halfWidth - radius, -halfDepth);
+                shape.quadraticCurveTo(halfWidth, -halfDepth, halfWidth, -halfDepth + radius);
+                shape.lineTo(halfWidth, halfDepth - radius);
+                shape.quadraticCurveTo(halfWidth, halfDepth, halfWidth - radius, halfDepth);
+                shape.lineTo(-halfWidth + radius, halfDepth);
+                shape.quadraticCurveTo(-halfWidth, halfDepth, -halfWidth, halfDepth - radius);
+                shape.lineTo(-halfWidth, -halfDepth + radius);
+                shape.quadraticCurveTo(-halfWidth, -halfDepth, -halfWidth + radius, -halfDepth);
+                
+                // Extrude settings for the prong (extrudes along Z-axis)
+                // Larger bevel for rounded ends
+                const extrudeSettings = {
+                    depth: prongLength,
+                    bevelEnabled: true,
+                    bevelThickness: radius * 1.5,  // Thicker bevel for rounded tips
+                    bevelSize: radius * 1.5,       // Larger bevel size
+                    bevelSegments: 5               // More segments for smoother curve
+                };
+                
+                const prongGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                
+                // Apply tapering: scale vertices from base to tip (pyramid/triangle shape)
+                // Vertices at Z=0 keep base size, vertices at Z=prongLength scale to tip size
+                const positions = prongGeometry.attributes.position;
+                const taperRatioWidth = clawWidthTop / clawWidthBase;
+                const taperRatioDepth = clawDepthTop / clawDepthBase;
+                
+                for (let j = 0; j < positions.count; j++) {
+                    const z = positions.getZ(j);
+                    const t = z / prongLength; // 0 at base, 1 at tip
+                    
+                    // Scale X and Y based on position along Z
+                    const scaleX = 1 + (taperRatioWidth - 1) * t;  // Width taper
+                    const scaleY = 1 + (taperRatioDepth - 1) * t;  // Depth taper
+                    
+                    positions.setX(j, positions.getX(j) * scaleX);
+                    positions.setY(j, positions.getY(j) * scaleY);
+                }
+                
+                positions.needsUpdate = true;
+                prongGeometry.computeVertexNormals(); // Recompute normals after scaling
+                
+                // Calculate transformations
+                // Direction vector from start to end (prong length direction)
+                const direction = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
+                
+                // Radial direction (points from center toward stone at this angle)
+                const radialDirection = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+                
+                // Tangent direction (perpendicular to radial, goes around the ring)
+                const tangentDirection = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle));
+                
+                // Create rotation matrix to orient prong correctly:
+                // - Extruded Z direction → prong direction (start to end)
+                // - Shape X direction → tangent direction (width around ring)
+                // - Shape Y direction → radial direction (narrow edge toward stone)
+                
+                const matrix = new THREE.Matrix4();
+                
+                // Build rotation matrix from basis vectors
+                // Column 0: where shape's X goes (tangent = width)
+                // Column 1: where shape's Y goes (radial = depth/narrow edge)
+                // Column 2: where extrude Z goes (prong direction = length)
+                const rotationMatrix = new THREE.Matrix4();
+                rotationMatrix.makeBasis(tangentDirection, radialDirection, direction);
+                
+                // Combine rotation and translation
+                matrix.multiplyMatrices(
+                    new THREE.Matrix4().makeTranslation(startPoint.x, startPoint.y, startPoint.z),
+                    rotationMatrix
+                );
+                
+                prongGeometry.applyMatrix4(matrix);
+                clawGeometries.push(prongGeometry);
+            }
+
+            // Merge all claw geometries into a single unified geometry
+            const mergedClawGeometry = mergeGeometries(clawGeometries);
+            const prongHead = new THREE.Mesh(mergedClawGeometry, prongMaterial);
+            prongHead.name = 'ProngHead';
+            
+            scene.add(prongHead);
+            loadedObjects.push(prongHead);
+            originalPositions.set(prongHead, prongHead.position.clone());
+            originalRotations.set(prongHead, prongHead.rotation.clone());
+
+            updateObjectList();
+            updateStatus(`Created simple diamond ring: ${config.prongCount} prongs (merged as single piece)`);
+        };
+
+        // Generate ring from form parameters
+        window.generateRing = function() {
+            // Read parameters from form inputs
+            const stoneShape = document.getElementById('stoneShape').value;
+            const stoneLength = parseFloat(document.getElementById('stoneLength').value);
+            const stoneWidth = parseFloat(document.getElementById('stoneWidth').value);
+            const stoneDepth = parseFloat(document.getElementById('stoneDepth').value);
+            const prongCount = parseInt(document.getElementById('prongCount').value);
+            const prongThicknessBase = parseFloat(document.getElementById('prongThicknessBase').value);
+            const prongThicknessTop = parseFloat(document.getElementById('prongThicknessTop').value);
+            const settingHeight = parseFloat(document.getElementById('settingHeight').value);
+            const ringSize = parseFloat(document.getElementById('ringSize').value);
+            const ringThickness = parseFloat(document.getElementById('ringThickness').value);
+            
+            // Calculate ring radius from inner diameter
+            const ringRadius = ringSize / 2;
+            
+            // For round stones, use the average of length and width
+            const stoneSize = stoneShape === 'round' ? (stoneLength + stoneWidth) / 2 : Math.max(stoneLength, stoneWidth);
+            
+            // Create configuration object
+            const config = {
+                ringSize: ringRadius,
+                ringThickness: ringThickness,
+                stoneSize: stoneSize,
+                stoneShape: stoneShape,
+                stoneLength: stoneLength,
+                stoneWidth: stoneWidth,
+                stoneDepth: stoneDepth,
+                prongCount: prongCount,
+                prongThickness: (prongThicknessBase + prongThicknessTop) / 2, // Average for now
+                prongThicknessBase: prongThicknessBase,
+                prongThicknessTop: prongThicknessTop,
+                stoneHeightAboveRing: settingHeight,
+                material: 'gold'
+            };
+            
+            // Generate the ring
+            createDiamondRingTemplate(config);
+        };
+
+        // Set ring orientation (vertical standing or horizontal lying flat)
+        window.setRingOrientation = function(orientation) {
+            // Rotate all loaded objects together
+            loadedObjects.forEach(obj => {
+                if (orientation === 'horizontal') {
+                    // Rotate 90 degrees around X-axis to lay flat
+                    obj.rotation.x = Math.PI / 2;
+                    
+                    // For stone, adjust position to match prong direction
+                    // When rotated around X: (0, Y, 0) → (0, 0, Y)
+                    // Stone and prongs both extend in Z direction when horizontal
+                    if (obj.name === 'Stone') {
+                        const originalPos = originalPositions.get(obj);
+                        // Transform: Y coordinate becomes Z coordinate
+                        obj.position.set(0, 0, originalPos.y);
+                    } else if (obj.name === 'ProngHead') {
+                        // Prong head also transforms the same way
+                        obj.position.set(0, 0, 0);
+                    }
+                } else {
+                    // Vertical (standing) - default orientation
+                    obj.rotation.x = 0;
+                    
+                    // Restore objects to original positions
+                    if (obj.name === 'Stone' || obj.name === 'ProngHead') {
+                        const originalPos = originalPositions.get(obj);
+                        obj.position.copy(originalPos);
+                    }
+                }
+            });
+            
+            updateStatus(`Ring orientation set to: ${orientation}`);
+        };
+
+        // Update existing ring with new dynamic parameters
+        window.updateRingParameters = function(newParams = {}) {
+            // Merge with current parameters if they exist
+            const currentParams = window.currentRingParams || {};
+            const params = { ...currentParams, ...newParams };
+            
+            // Store current parameters
+            window.currentRingParams = params;
+            
+            // Regenerate the ring
+            createDiamondRingTemplate(params);
+        };
+
+        // Export model as GLB
+        window.exportModel = function() {
+            if (loadedObjects.length === 0) {
+                updateStatus('No objects to export');
+                return;
+            }
+            
+            updateStatus('Exporting GLB...');
+            
+            // Create a group with all loaded objects
+            const exportGroup = new THREE.Group();
+            loadedObjects.forEach(obj => {
+                exportGroup.add(obj.clone());
+            });
+            
+            // Export as GLB
+            const exporter = new GLTFExporter();
+            exporter.parse(
+                exportGroup,
+                function(result) {
+                    // result is an ArrayBuffer when binary is true
+                    const blob = new Blob([result], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'diamond_ring.glb';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    updateStatus('GLB exported successfully!');
+                },
+                function(error) {
+                    console.error('Export error:', error);
+                    updateStatus('Export failed: ' + error.message);
+                },
+                { binary: true }
+            );
+        };
+
+        // Update UI controls to match template parameters
+        window.updateParameterControls = function(templateName) {
+            const template = window.diamondRingTemplates[templateName];
+            if (template) {
+                document.getElementById('dynamicStoneDiameter').value = template.stoneDiameter;
+                document.getElementById('dynamicStoneHeight').value = template.stoneHeight;
+                document.getElementById('dynamicRingOuterRadius').value = template.ringOuterRadius;
+                document.getElementById('dynamicRingTubeRadius').value = template.ringTubeRadius;
+                document.getElementById('dynamicProngCount').value = template.prongCount;
+                document.getElementById('dynamicProngThickness').value = template.prongThickness;
+                document.getElementById('dynamicStoneShape').value = template.stoneShape;
+                document.getElementById('dynamicMaterialType').value = template.materialType;
+                
+                // Store current parameters
+                window.currentRingParams = { ...template };
+            }
+        };
+
+        // Simple template configurations
+        window.diamondRingTemplates = {
+            classic_4_prong: {
+                ringSize: 9.0,
+                ringThickness: 1.0,
+                stoneSize: 6.0,
+                stoneHeightAboveRing: 3.0,  // Stone height above ring in mm
+                prongCount: 4,
+                prongHeight: 4.0,
+                prongThickness: 0.4,
+                clawCurve: 0.4,  // Inward curve at claw tips
+                material: 'gold'
+            },
+            elegant_solitaire: {
+                // Based on reference image: classic platinum solitaire
+                // Features: 4 curved claws converging from single point
+                ringSize: 9.0,           // Standard ring size
+                ringThickness: 0.95,     // Slightly slimmer band for elegance
+                stoneSize: 7.5,          // Large round brilliant cut stone
+                stoneHeightAboveRing: 4.0,  // Higher stone elevation
+                prongCount: 4,           // Classic 4-prong setting
+                prongHeight: 5.5,        // Tall prongs for high stone elevation
+                prongThickness: 0.35,    // Slender prongs for refined look
+                clawCurve: 0.5,          // Pronounced inward curve
+                material: 'platinum'     // Platinum for white metal finish
+            },
+            elegant_6_prong: {
+                ringSize: 8.5,
+                ringThickness: 0.9,
+                stoneSize: 7.0,
+                stoneHeightAboveRing: 3.5,
+                prongCount: 6,
+                prongHeight: 4.5,
+                prongThickness: 0.38,
+                clawCurve: 0.45,
+                material: 'platinum'
+            },
+            delicate_2_prong: {
+                ringSize: 7.5,
+                ringThickness: 0.8,
+                stoneSize: 5.5,
+                stoneHeightAboveRing: 2.5,
+                prongCount: 2,
+                prongHeight: 3.5,
+                prongThickness: 0.35,
+                clawCurve: 0.3,
+                material: 'gold'
+            },
+            bold_8_prong: {
+                ringSize: 10.0,
+                ringThickness: 1.2,
+                stoneSize: 8.0,
+                stoneHeightAboveRing: 3.5,
+                prongCount: 8,
+                prongHeight: 5.0,
+                prongThickness: 0.45,
+                clawCurve: 0.35,
+                material: 'gold'
+            },
+            vintage_small: {
+                ringSize: 8.0,
+                ringThickness: 1.1,
+                stoneSize: 4.5,
+                stoneHeightAboveRing: 2.8,
+                prongCount: 4,
+                prongHeight: 3.5,
+                prongThickness: 0.4,
+                clawCurve: 0.42,
+                material: 'silver'
+            },
+            modern_oversized: {
+                ringSize: 11.0,
+                ringThickness: 1.3,
+                stoneSize: 9.0,
+                stoneHeightAboveRing: 4.5,
+                prongCount: 6,
+                prongHeight: 6.0,
+                prongThickness: 0.5,
+                clawCurve: 0.4,
+                material: 'platinum'
+            },
+            princess_cut: {
+                ringSize: 9.5,
+                ringThickness: 1.0,
+                stoneSize: 6.0,
+                stoneHeightAboveRing: 3.2,
+                prongCount: 4,
+                prongHeight: 4.0,
+                prongThickness: 0.42,
+                clawCurve: 0.38,
+                material: 'gold'
+            },
+            emerald_cut: {
+                ringSize: 9.0,
+                ringThickness: 1.0,
+                stoneSize: 7.0,
+                stoneHeightAboveRing: 3.0,
+                prongCount: 6,
+                prongHeight: 4.0,
+                prongThickness: 0.4,
+                clawCurve: 0.4,
+                material: 'platinum'
+            }
+        };
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
