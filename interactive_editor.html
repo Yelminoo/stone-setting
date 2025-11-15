@@ -1371,10 +1371,18 @@
             let stoneGeometry;
             const stoneShape = config.stoneShape || 'round';
             
+            // Calculate actual prong spread radius based on stone shape
+            let actualProngSpreadRadius = prongSpreadRadius;
+            
             if (stoneShape === 'princess') {
                 // Princess cut - square shape
                 const squareSize = stoneRadius * 2; // Convert radius to square size
                 stoneGeometry = createPrincessCutDiamond(squareSize, stoneDepth);
+                
+                // For square stones, prongs at corners need diagonal radius
+                // Diagonal = side * sqrt(2), so radius = side * sqrt(2) / 2
+                // Since squareSize is the full side length, diagonal radius = squareSize * sqrt(2) / 2
+                actualProngSpreadRadius = (squareSize / 2) * Math.sqrt(2) + 0.2; // Add clearance
             } else if (stoneShape === 'radiant') {
                 // Radiant cut - rectangular with cut corners
                 const stoneLength = config.stoneLength || stoneRadius * 2;
@@ -1436,8 +1444,8 @@
             for (let i = 0; i < config.prongCount; i++) {
                 const angle = (i / config.prongCount) * Math.PI * 2;
 
-                // End point near stone with clearance - use prongSpreadRadius for positioning
-                const endRadius = prongSpreadRadius; // Prongs positioned at spread radius (0.35mm away from stone)
+                // End point near stone with clearance - use actualProngSpreadRadius (adjusted for stone shape)
+                const endRadius = actualProngSpreadRadius; // For princess cut, uses diagonal radius to avoid corners
                 const endX = endRadius * Math.cos(angle);
                 const endZ = endRadius * Math.sin(angle);
                 const endY = stoneY; // At stone center height

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ring Generator</title>
+  <style>
+    body { margin:0; font-family:Inter,Segoe UI,Arial, sans-serif; display:flex; height:100vh; }
+    .sidebar { width:360px; padding:16px; box-sizing:border-box; background:#f6f7fb; overflow:auto; border-right:1px solid #e2e4ee }
+    .viewer { flex:1; position:relative; }
+    label { display:block; margin-top:10px; font-size:13px; color:#333 }
+    input[type=number], select, input[type=range] { width:100%; box-sizing:border-box; padding:6px 8px; margin-top:6px }
+    button { margin-top:12px; padding:10px 12px; background:#2b6df6; color:white; border:0; border-radius:6px; cursor:pointer }
+    .small { font-size:12px; color:#666 }
+    #status { margin-top:10px; font-size:13px }
+    #canvas { width:100%; height:100%; display:block }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Ring Generator</h2>
+    <div class="small">Quick controls to build a ring and preview the designer GLB.</div>
+
+    <label>Inner radius (mm)</label>
+    <input id="innerRadius" type="number" step="0.1" value="8.0">
+
+    <label>Outer radius (mm)</label>
+    <input id="outerRadius" type="number" step="0.1" value="10.5">
+
+    <label>Ring thickness / band height (mm)</label>
+    <input id="ringThickness" type="number" step="0.1" value="2.0">
+
+  <label>Ring curvature (tube radius, mm) — leave empty for automatic</label>
+  <input id="ringTubeRadius" type="number" step="0.1" placeholder="auto">
+
+  <label><input id="rimClawCluster" type="checkbox"> Add rim claw cluster (fan)</label>
+  <label>Claw count</label>
+  <input id="rimClawCount" type="number" step="1" value="4">
+  <label>Claw spread (degrees)</label>
+  <input id="rimClawSpread" type="number" step="1" value="30">
+  <label>Claw length (mm)</label>
+  <input id="rimClawLength" type="number" step="0.1" value="6.0">
+  <label>Claw base diameter (mm)</label>
+  <input id="rimClawBaseD" type="number" step="0.1" value="1.2">
+  <label>Claw tip diameter (mm)</label>
+  <input id="rimClawTipD" type="number" step="0.1" value="0.6">
+  <label>Claw tilt Z factor (0-1)</label>
+  <input id="rimClawTilt" type="number" step="0.05" value="0.25">
+  <label>Claw base angle (deg)</label>
+  <input id="rimClawAngle" type="number" step="1" value="0">
+
+    <label>Base type</label>
+    <select id="baseType">
+      <option value="ring">Ring (band)</option>
+      <option value="minimal">Minimal</option>
+      <option value="none">None</option>
+    </select>
+
+    <label>Prong count</label>
+    <select id="prongCount">
+      <option>4</option>
+      <option>6</option>
+      <option>8</option>
+    </select>
+
+    <label>Prong thickness (base, mm)</label>
+    <input id="prongThicknessBase" type="number" step="0.1" value="0.8">
+
+    <label>Prong thickness (top, mm)</label>
+    <input id="prongThicknessTop" type="number" step="0.1" value="0.5">
+
+    <label>Setting visible height (mm)</label>
+    <input id="settingHeight" type="number" step="0.1" value="3.5">
+
+    <label>Prong base style</label>
+    <select id="prongBaseStyle">
+      <option value="individual">Individual</option>
+      <option value="shared">Shared</option>
+      <option value="gallery">Gallery</option>
+    </select>
+
+    <label>Ring penetration (mm) — overlap to avoid visible gap</label>
+    <input id="ringPenetration" type="range" min="0" max="1" step="0.05" value="0.2">
+    <div class="small">Value: <span id="rpVal">0.2</span> mm</div>
+
+  <button id="generateRingOnly">Generate Ring Only (no stone/prongs)</button>
+
+    <hr>
+    <h3>Stone</h3>
+    <label>Shape</label>
+    <select id="stoneShape">
+      <option value="round">Round</option>
+      <option value="princess">Princess</option>
+      <option value="radiant">Radiant</option>
+    </select>
+    <label>Length (mm)</label>
+    <input id="stoneLength" type="number" step="0.1" value="6.5">
+    <label>Width (mm)</label>
+    <input id="stoneWidth" type="number" step="0.1" value="6.5">
+    <label>Depth (mm)</label>
+    <input id="stoneDepth" type="number" step="0.1" value="4.0">
+
+    <button id="generate">Generate & Preview</button>
+    <div id="status"></div>
+    <div style="margin-top:20px" class="small">Files are written to server's <code>output/</code> folder as designer/production GLBs.</div>
+  </div>
+
+  <div class="viewer">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <!-- Three.js (ES module) + loaders from unpkg -->
+  <script type="module">
+  // Use esm.sh CDN which rewrites internal imports and is stable for browser ES modules
+  import * as THREE from 'https://esm.sh/three@0.155.0';
+  import { OrbitControls } from 'https://esm.sh/three@0.155.0/examples/jsm/controls/OrbitControls.js';
+  import { GLTFLoader } from 'https://esm.sh/three@0.155.0/examples/jsm/loaders/GLTFLoader.js';
+
+    const status = document.getElementById('status');
+    const rp = document.getElementById('ringPenetration');
+    const rpVal = document.getElementById('rpVal');
+    rp.addEventListener('input', ()=> rpVal.textContent = rp.value);
+
+    // simple helper to collect params
+    function collectParams(){
+      return {
+        stone_shape: document.getElementById('stoneShape').value,
+        stone_length: parseFloat(document.getElementById('stoneLength').value),
+        stone_width: parseFloat(document.getElementById('stoneWidth').value),
+        stone_depth: parseFloat(document.getElementById('stoneDepth').value),
+        prong_count: parseInt(document.getElementById('prongCount').value,10),
+        prong_thickness_base: parseFloat(document.getElementById('prongThicknessBase').value),
+        prong_thickness_top: parseFloat(document.getElementById('prongThicknessTop').value),
+        setting_height: parseFloat(document.getElementById('settingHeight').value),
+        prong_base_style: document.getElementById('prongBaseStyle').value,
+        prong_base_width: 1.2,
+        prong_base_height: 1.0,
+        gallery_radius: null,
+        base_type: document.getElementById('baseType').value,
+        ring_outer_radius: parseFloat(document.getElementById('outerRadius').value),
+        ring_inner_radius: parseFloat(document.getElementById('innerRadius').value),
+        ring_thickness: parseFloat(document.getElementById('ringThickness').value),
+        ring_penetration: parseFloat(document.getElementById('ringPenetration').value),
+        ring_tube_radius: (document.getElementById('ringTubeRadius').value !== '' ? parseFloat(document.getElementById('ringTubeRadius').value) : null),
+        rim_claw_cluster: document.getElementById('rimClawCluster').checked,
+        rim_claw_count: parseInt(document.getElementById('rimClawCount').value,10),
+        rim_claw_spread_deg: parseFloat(document.getElementById('rimClawSpread').value),
+        rim_claw_length: parseFloat(document.getElementById('rimClawLength').value),
+        rim_claw_base_diameter: parseFloat(document.getElementById('rimClawBaseD').value),
+        rim_claw_tip_diameter: parseFloat(document.getElementById('rimClawTipD').value),
+        rim_claw_tilt_z_factor: parseFloat(document.getElementById('rimClawTilt').value),
+        rim_claw_base_angle_deg: parseFloat(document.getElementById('rimClawAngle').value),
+      };
+    }
+
+    // helper to parse server responses safely (handle HTML error pages)
+    async function parseResponse(resp){
+      const ct = resp.headers.get('content-type') || '';
+      if(ct.indexOf('application/json') !== -1){
+        return resp.json();
+      }
+      // fallback: return plain text
+      const text = await resp.text();
+      try{ return JSON.parse(text); } catch(e) { return { _raw: text }; }
+    }
+
+    const API_BASE = window.location.origin;
+
+    // generate full setting button
+    document.getElementById('generate').addEventListener('click', async ()=>{
+      const params = collectParams();
+      status.textContent = 'Generating...';
+      try{
+        const url = `${API_BASE}/generate`;
+        console.log('POST', url, params);
+        const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(params) });
+        const json = await parseResponse(resp);
+        if(resp.ok){
+          status.textContent = 'Generated. Loading preview...';
+          const url = json.designer_url || '/output/designer.glb';
+          await loadGLB(url);
+        } else {
+          const msg = json && (json.error || json.message || json._raw) ? (json.error || json.message || json._raw) : resp.statusText;
+          status.textContent = 'Generation failed: ' + msg;
+        }
+      } catch(err){
+        status.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // generate ring only button
+    document.getElementById('generateRingOnly').addEventListener('click', async ()=>{
+      const params = {
+        ring_outer_radius: parseFloat(document.getElementById('outerRadius').value),
+        ring_inner_radius: parseFloat(document.getElementById('innerRadius').value),
+        ring_thickness: parseFloat(document.getElementById('ringThickness').value),
+        ring_penetration: parseFloat(document.getElementById('ringPenetration').value),
+        ring_tube_radius: (document.getElementById('ringTubeRadius').value !== '' ? parseFloat(document.getElementById('ringTubeRadius').value) : null),
+        rim_claw_cluster: document.getElementById('rimClawCluster').checked,
+        rim_claw_count: parseInt(document.getElementById('rimClawCount').value,10),
+        rim_claw_spread_deg: parseFloat(document.getElementById('rimClawSpread').value),
+        rim_claw_length: parseFloat(document.getElementById('rimClawLength').value),
+        rim_claw_base_diameter: parseFloat(document.getElementById('rimClawBaseD').value),
+        rim_claw_tip_diameter: parseFloat(document.getElementById('rimClawTipD').value),
+        rim_claw_tilt_z_factor: parseFloat(document.getElementById('rimClawTilt').value),
+        rim_claw_base_angle_deg: parseFloat(document.getElementById('rimClawAngle').value)
+      };
+      status.textContent = 'Generating ring...';
+      try{
+  const url = `${API_BASE}/generate_ring`;
+  console.log('POST', url, params);
+  const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(params) });
+        const json = await parseResponse(resp);
+        if(resp.ok){
+          status.textContent = 'Ring generated. Loading preview...';
+          const url = json.designer_file_stable || '/output/designer.glb';
+          await loadGLB(url);
+        } else {
+          const msg = json && (json.error || json.message || json._raw) ? (json.error || json.message || json._raw) : resp.statusText;
+          status.textContent = 'Generation failed: ' + msg;
+        }
+      } catch(err){
+        status.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // --- Three.js viewer setup ---
+    let scene, camera, renderer, controls, currentModel;
+    function initViewer(){
+      const canvas = document.getElementById('canvas');
+      renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth - 360, window.innerHeight);
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f3fb);
+      camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 360)/window.innerHeight, 0.1, 1000);
+      camera.position.set(40,40,40);
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0,0,0);
+      controls.update();
+
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(50,50,100);
+      scene.add(dir);
+
+      const grid = new THREE.GridHelper(200, 40, 0xdddddd, 0xeeeeee);
+      scene.add(grid);
+
+      window.addEventListener('resize', ()=>{
+        renderer.setSize(window.innerWidth - 360, window.innerHeight);
+        camera.aspect = (window.innerWidth - 360)/window.innerHeight;
+        camera.updateProjectionMatrix();
+      });
+
+      animate();
+    }
+    function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
+
+    async function loadGLB(url){
+      // remove previous
+      if(currentModel){
+        scene.remove(currentModel);
+        currentModel.traverse && currentModel.traverse(o=> { if(o.geometry) o.geometry.dispose && o.geometry.dispose(); if(o.material) { if(Array.isArray(o.material)){ o.material.forEach(m=> m.dispose && m.dispose()); } else { o.material.dispose && o.material.dispose(); } } });
+        currentModel = null;
+      }
+
+      const loader = new GLTFLoader();
+      status.textContent = 'Loading preview...';
+
+      try{
+        const gltf = await new Promise((res, rej)=> loader.load(url, res, (xhr)=>{
+          try{ if(xhr && xhr.total) status.textContent = 'Loading preview... ' + Math.round(xhr.loaded / xhr.total * 100) + '%'; }catch(e){}
+        }, rej));
+
+        currentModel = gltf.scene || (gltf.scenes && gltf.scenes[0]);
+        if(!currentModel){ throw new Error('GLTF contains no scene'); }
+
+        let meshCount = 0;
+        currentModel.traverse((o)=>{
+          if(o.isMesh){ meshCount++; if(!o.material){ o.material = new THREE.MeshStandardMaterial({color:0xcacaca, metalness:0.4, roughness:0.6}); } }
+        });
+
+        const box = new THREE.Box3().setFromObject(currentModel);
+        const sizeVec = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
+        const center = box.getCenter(new THREE.Vector3());
+
+        const desiredSize = 24;
+        const curSize = Math.max(maxDim, 1e-6);
+        const scaleFactor = desiredSize / curSize;
+        currentModel.scale.setScalar(scaleFactor);
+        currentModel.position.sub(center.multiplyScalar(scaleFactor));
+
+        scene.add(currentModel);
+
+        const fov = camera.fov * Math.PI / 180;
+        const distance = (desiredSize / 2) / Math.tan(fov / 2) * 1.4;
+        const camDir = new THREE.Vector3(1, 1, 0.7).normalize();
+        const camPos = camDir.multiplyScalar(distance);
+        camera.position.copy(camPos);
+        controls.target.set(0,0,0);
+        controls.update();
+
+        if(meshCount === 0){ const geo = new THREE.BoxGeometry(desiredSize, desiredSize, desiredSize); const mat = new THREE.MeshBasicMaterial({wireframe:true, color:0x666666}); const cube = new THREE.Mesh(geo, mat); scene.add(cube); currentModel = cube; }
+
+        status.textContent = 'Preview loaded';
+        console.log('GLB loaded:', { url, meshCount, bbox: box, scaleFactor });
+
+      } catch(e){ console.warn('GLB load failed', e); status.textContent = 'Preview load failed: ' + (e.message || e); }
+    }
+
+    initViewer();
+
+    // attempt to load any existing designer.glb on open
+    (async ()=>{ try{ await fetch('/output/designer.glb', {method:'HEAD'}).then(r=> { if(r.ok) loadGLB('/output/designer.glb'); }); }catch(e){} })();
+  </script>
+</body>
+</html>

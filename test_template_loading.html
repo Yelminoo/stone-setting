@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Template Loading Test</title>
+</head>
+<body>
+    <h1>Testing Template Loading</h1>
+    <button onclick="testTemplateLoad()">Test Load Classic 4-Prong Template</button>
+    <div id="result"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        window.testTemplateLoad = async function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Loading template...';
+
+            try {
+                const loader = new GLTFLoader();
+                const glbPath = 'output/diamond_ring_classic_4_prong.glb';
+
+                loader.load(glbPath, (gltf) => {
+                    let stoneCount = 0, ringCount = 0, prongCount = 0;
+
+                    gltf.scene.traverse((child) => {
+                        if (child.isMesh) {
+                            const name = child.name || child.parent.name || '';
+                            if (name.includes('Stone')) stoneCount++;
+                            else if (name.includes('Ring')) ringCount++;
+                            else if (name.includes('Prong')) prongCount++;
+                        }
+                    });
+
+                    resultDiv.innerHTML = `
+                        <h2>✅ Template loaded successfully!</h2>
+                        <p>Found ${stoneCount} stone(s), ${ringCount} ring(s), ${prongCount} prong(s)</p>
+                        <p>Total meshes: ${stoneCount + ringCount + prongCount}</p>
+                    `;
+                },
+                (progress) => {
+                    resultDiv.textContent = `Loading... ${Math.round(progress.loaded / progress.total * 100)}%`;
+                },
+                (error) => {
+                    resultDiv.innerHTML = `<h2>❌ Error loading template</h2><p>${error.message}</p>`;
+                    console.error('Error:', error);
+                });
+
+            } catch (error) {
+                resultDiv.innerHTML = `<h2>❌ Error</h2><p>${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        };
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">d:\Python-CAD-3D\test_template_loading.html

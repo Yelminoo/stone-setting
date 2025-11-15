@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Parametric Stone Setting Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        #controls-panel {
+            width: 350px;
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+        #viewer {
+            flex: 1;
+            position: relative;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #0f3460;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            font-size: 16px;
+            margin: 20px 0 10px 0;
+            color: #4ecca3;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 5px;
+        }
+        .param-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            background: #0f3460;
+            border: 1px solid #4ecca3;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 13px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+        .slider-value {
+            min-width: 50px;
+            text-align: right;
+            font-size: 12px;
+            color: #4ecca3;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .button-row button {
+            margin-top: 0;
+        }
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 4px;
+            font-size: 12px;
+            min-height: 40px;
+        }
+        .status-success {
+            color: #4ecca3;
+        }
+        .status-error {
+            color: #ff6b6b;
+        }
+        .status-info {
+            color: #4ecdc4;
+        }
+        #transform-display {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+        }
+        .preset-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0f3460;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .preset-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #16213e;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preset-item:hover {
+            background: #1f2d4d;
+        }
+        .preset-item button {
+            padding: 4px 8px;
+            width: auto;
+            margin: 0;
+            font-size: 11px;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            padding: 20px 40px;
+            border-radius: 8px;
+            display: none;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4ecca3;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+        }
+        #collision-warning {
+            background: #ff6b6b;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        #collision-warning.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls-panel">
+            <h1>🎨 Real-Time Editor</h1>
+            
+            <h2>📦 Presets</h2>
+            <div class="button-row">
+                <button onclick="loadPresetsList()">Refresh List</button>
+                <button onclick="saveCurrentPreset()">Save Preset</button>
+            </div>
+            <div id="presets-list" class="preset-list"></div>
+            
+            <h2>💎 Stone Parameters</h2>
+            <div class="param-group">
+                <label>Shape:</label>
+                <select id="stone_shape" onchange="updatePreview()">
+                    <option value="round">Round</option>
+                    <option value="princess">Princess</option>
+                    <option value="oval">Oval</option>
+                    <option value="emerald">Emerald</option>
+                </select>
+            </div>
+            
+            <div class="param-group">
+                <label>Width (mm): <span id="stone_width_val">6.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="stone_width" min="2" max="15" step="0.1" value="6.0" oninput="updateSlider('stone_width')">
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <label>Length (mm): <span id="stone_length_val">6.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="stone_length" min="2" max="15" step="0.1" value="6.0" oninput="updateSlider('stone_length')">
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <label>Depth (mm): <span id="stone_depth_val">4.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="stone_depth" min="1" max="10" step="0.1" value="4.0" oninput="updateSlider('stone_depth')">
+                </div>
+            </div>
+            
+            <h2>🔗 Ring Parameters</h2>
+            <div class="param-group">
+                <label>Outer Radius (mm): <span id="ring_outer_radius_val">9.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="ring_outer_radius" min="5" max="15" step="0.1" value="9.0" oninput="updateSlider('ring_outer_radius')">
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <label>Tube Radius (mm): <span id="ring_tube_radius_val">1.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="ring_tube_radius" min="0.3" max="2" step="0.1" value="1.0" oninput="updateSlider('ring_tube_radius')">
+                </div>
+            </div>
+            
+            <h2>🦅 Prong Parameters</h2>
+            <div class="param-group">
+                <label>Prong Count: <span id="prong_count_val">4</span></label>
+                <div class="slider-container">
+                    <input type="range" id="prong_count" min="3" max="8" step="1" value="4" oninput="updateSlider('prong_count')">
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <label>Base Thickness (mm): <span id="prong_thickness_base_val">0.6</span></label>
+                <div class="slider-container">
+                    <input type="range" id="prong_thickness_base" min="0.3" max="2" step="0.1" value="0.6" oninput="updateSlider('prong_thickness_base')">
+                </div>
+            </div>
+            
+            <div class="param-group">
+                <label>Setting Height (mm): <span id="setting_height_val">3.0</span></label>
+                <div class="slider-container">
+                    <input type="range" id="setting_height" min="1" max="8" step="0.1" value="3.0" oninput="updateSlider('setting_height')">
+                </div>
+            </div>
+            
+            <div class="checkbox-container">
+                <input type="checkbox" id="auto_preview" checked>
+                <label for="auto_preview">Auto Preview</label>
+            </div>
+            
+            <div class="checkbox-container">
+                <input type="checkbox" id="debug_markers">
+                <label for="debug_markers">Show Debug Markers</label>
+            </div>
+            
+            <h2>⚡ Actions</h2>
+            <button onclick="generateFullModel()">🚀 Generate Full Model</button>
+            <button onclick="updatePreview()">👁️ Update Preview</button>
+            
+            <div class="button-row">
+                <button onclick="exportParameters()">💾 Export JSON</button>
+                <button onclick="downloadModel()">📥 Download GLB</button>
+            </div>
+            
+            <div id="collision-warning">
+                ⚠️ Collision detected! Objects are overlapping.
+            </div>
+            
+            <div id="status" class="status-info">Ready to generate...</div>
+            
+            <div id="transform-display"></div>
+        </div>
+        
+        <div id="viewer">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; text-align: center;">Generating...</p>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        let scene, camera, renderer, controls, transformControls;
+        let loadedModel = null;
+        let currentParams = {};
+        let autoPreviewTimeout = null;
+
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 15, 25);
+            
+            // Renderer
+            const canvas = document.getElementById('canvas');
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(window.innerWidth - 350, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+            
+            const spotLight = new THREE.SpotLight(0xffffff, 0.5);
+            spotLight.position.set(-10, 15, -10);
+            scene.add(spotLight);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(50, 50, 0x4ecca3, 0x333333);
+            scene.add(gridHelper);
+            
+            // Axes
+            const axesHelper = new THREE.AxesHelper(15);
+            scene.add(axesHelper);
+            
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Transform controls
+            transformControls = new TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', (event) => {
+                controls.enabled = !event.value;
+            });
+            transformControls.addEventListener('objectChange', onTransformChange);
+            scene.add(transformControls);
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Animation loop
+            animate();
+            
+            // Load presets list
+            loadPresetsList();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = (window.innerWidth - 350) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth - 350, window.innerHeight);
+        }
+
+        function onTransformChange() {
+            if (transformControls.object) {
+                const obj = transformControls.object;
+                updateTransformDisplay(obj);
+                
+                // Send transform to server
+                sendTransformUpdate(obj);
+            }
+        }
+
+        function updateTransformDisplay(obj) {
+            const pos = obj.position;
+            const rot = obj.rotation;
+            const scale = obj.scale;
+            
+            const display = document.getElementById('transform-display');
+            display.innerHTML = `
+                <div><strong>Selected: ${obj.name || 'Unknown'}</strong></div>
+                <div>Position: (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})</div>
+                <div>Rotation: (${THREE.MathUtils.radToDeg(rot.x).toFixed(1)}°, ${THREE.MathUtils.radToDeg(rot.y).toFixed(1)}°, ${THREE.MathUtils.radToDeg(rot.z).toFixed(1)}°)</div>
+                <div>Scale: (${scale.x.toFixed(2)}, ${scale.y.toFixed(2)}, ${scale.z.toFixed(2)})</div>
+            `;
+        }
+
+        async function sendTransformUpdate(obj) {
+            try {
+                const response = await fetch('/update_transform', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        object_name: obj.name,
+                        transform: {
+                            position: { x: obj.position.x, y: obj.position.y, z: obj.position.z },
+                            rotation: { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z },
+                            scale: { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z }
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Transform updated:', data);
+            } catch (error) {
+                console.error('Error sending transform:', error);
+            }
+        }
+
+        function getCurrentParams() {
+            return {
+                stone_shape: document.getElementById('stone_shape').value,
+                stone_width: parseFloat(document.getElementById('stone_width').value),
+                stone_length: parseFloat(document.getElementById('stone_length').value),
+                stone_depth: parseFloat(document.getElementById('stone_depth').value),
+                ring_outer_radius: parseFloat(document.getElementById('ring_outer_radius').value),
+                ring_tube_radius: parseFloat(document.getElementById('ring_tube_radius').value),
+                ring_inner_radius: parseFloat(document.getElementById('ring_outer_radius').value) - 1.5,
+                ring_thickness: 2.0,
+                ring_profile: 'rounded',
+                prong_count: parseInt(document.getElementById('prong_count').value),
+                prong_thickness_base: parseFloat(document.getElementById('prong_thickness_base').value),
+                prong_thickness_top: parseFloat(document.getElementById('prong_thickness_base').value) * 0.7,
+                setting_height: parseFloat(document.getElementById('setting_height').value),
+                prong_base_style: 'gallery',
+                prong_base_width: 1.2,
+                prong_base_height: 1.0,
+                base_type: 'ring',
+                debug_markers: document.getElementById('debug_markers').checked
+            };
+        }
+
+        window.updateSlider = function(paramName) {
+            const slider = document.getElementById(paramName);
+            const valueDisplay = document.getElementById(paramName + '_val');
+            valueDisplay.textContent = slider.value;
+            
+            // Auto preview if enabled
+            if (document.getElementById('auto_preview').checked) {
+                clearTimeout(autoPreviewTimeout);
+                autoPreviewTimeout = setTimeout(() => {
+                    updatePreview();
+                }, 500);
+            }
+        };
+
+        window.updatePreview = async function() {
+            showLoading(true);
+            updateStatus('Generating preview...', 'info');
+            
+            try {
+                currentParams = getCurrentParams();
+                
+                const response = await fetch('/live_preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentParams)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await loadModel(data.preview_file + '?t=' + data.timestamp);
+                    updateStatus('Preview updated!', 'success');
+                } else {
+                    updateStatus('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('Error generating preview: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        window.generateFullModel = async function() {
+            showLoading(true);
+            updateStatus('Generating full model...', 'info');
+            
+            try {
+                currentParams = getCurrentParams();
+                
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentParams)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await loadModel(data.designer_file_stable + '?t=' + Date.now());
+                    updateStatus('Full model generated successfully!', 'success');
+                } else {
+                    updateStatus('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('Error generating model: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        async function loadModel(url) {
+            return new Promise((resolve, reject) => {
+                const loader = new GLTFLoader();
+                
+                loader.load(
+                    url,
+                    (gltf) => {
+                        // Remove old model
+                        if (loadedModel) {
+                            scene.remove(loadedModel);
+                        }
+                        
+                        loadedModel = gltf.scene;
+                        loadedModel.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                                
+                                // Assign names if available
+                                if (!child.name) {
+                                    child.name = 'Component';
+                                }
+                            }
+                        });
+                        
+                        scene.add(loadedModel);
+                        resolve();
+                    },
+                    (progress) => {
+                        console.log('Loading:', (progress.loaded / progress.total * 100) + '%');
+                    },
+                    (error) => {
+                        console.error('Error loading model:', error);
+                        reject(error);
+                    }
+                );
+            });
+        }
+
+        window.exportParameters = function() {
+            const params = getCurrentParams();
+            const dataStr = JSON.stringify(params, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `stone_setting_params_${Date.now()}.json`;
+            link.click();
+            updateStatus('Parameters exported!', 'success');
+        };
+
+        window.downloadModel = function() {
+            const link = document.createElement('a');
+            link.href = 'output/designer.glb';
+            link.download = `stone_setting_${Date.now()}.glb`;
+            link.click();
+            updateStatus('Model download started!', 'success');
+        };
+
+        window.saveCurrentPreset = async function() {
+            const name = prompt('Enter preset name:');
+            if (!name) return;
+            
+            const description = prompt('Enter description (optional):');
+            
+            try {
+                const params = getCurrentParams();
+                const response = await fetch('/save_preset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description || '',
+                        params: params
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Preset saved: ' + name, 'success');
+                    loadPresetsList();
+                } else {
+                    updateStatus('Error saving preset: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+            }
+        };
+
+        window.loadPresetsList = async function() {
+            try {
+                const response = await fetch('/list_presets');
+                const data = await response.json();
+                
+                const listDiv = document.getElementById('presets-list');
+                listDiv.innerHTML = '';
+                
+                if (data.presets && data.presets.length > 0) {
+                    data.presets.forEach(preset => {
+                        const item = document.createElement('div');
+                        item.className = 'preset-item';
+                        item.innerHTML = `
+                            <div>
+                                <strong>${preset.name}</strong><br>
+                                <small>${preset.description || 'No description'}</small>
+                            </div>
+                            <div>
+                                <button onclick="loadPreset('${preset.name}')">Load</button>
+                                <button onclick="deletePreset('${preset.name}')">Delete</button>
+                            </div>
+                        `;
+                        listDiv.appendChild(item);
+                    });
+                } else {
+                    listDiv.innerHTML = '<div style="text-align: center; color: #666;">No presets saved</div>';
+                }
+            } catch (error) {
+                console.error('Error loading presets:', error);
+            }
+        };
+
+        window.loadPreset = async function(name) {
+            try {
+                const response = await fetch(`/load_preset/${name}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const params = data.preset.params;
+                    
+                    // Update UI with preset values
+                    Object.keys(params).forEach(key => {
+                        const element = document.getElementById(key);
+                        if (element) {
+                            element.value = params[key];
+                            if (element.type === 'range') {
+                                updateSlider(key);
+                            }
+                        }
+                    });
+                    
+                    updateStatus('Preset loaded: ' + name, 'success');
+                    updatePreview();
+                } else {
+                    updateStatus('Error loading preset: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+            }
+        };
+
+        window.deletePreset = async function(name) {
+            if (!confirm(`Delete preset "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`/delete_preset/${name}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Preset deleted: ' + name, 'success');
+                    loadPresetsList();
+                } else {
+                    updateStatus('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+            }
+        };
+
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status-' + type;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

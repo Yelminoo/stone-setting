@@ -372,6 +372,40 @@
         <button class="preset-btn" onclick="loadPreset('vintage')">Vintage</button>
       </div>
     </div>
+
+    <!-- Viewer Background -->
+    <div class="section">
+      <h3>Viewer Background</h3>
+      <div class="form-group">
+        <label for="background_type">Background Type</label>
+        <select id="background_type">
+          <option value="solid">Solid Color</option>
+          <option value="gradient">Gradient</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="bg_color1">Primary Color</label>
+        <input type="color" id="bg_color1" value="#222222">
+      </div>
+
+      <div class="form-group" id="bg_color2_group" style="display:none;">
+        <label for="bg_color2">Secondary Color (for gradient)</label>
+        <input type="color" id="bg_color2" value="#444444">
+      </div>
+    </div>
+
+    <!-- Ring Settings -->
+    <div class="section">
+      <h3>Ring & Fit</h3>
+      <div class="form-group">
+        <label for="ring_penetration">Ring Penetration (mm)</label>
+        <div class="range-group">
+          <input type="range" id="ring_penetration" min="0" max="1.0" step="0.01" value="0.2" oninput="updateRangeValue('ring_penetration'); updatePreview()">
+          <span class="range-value" id="ring_penetration_value">0.2</span>
+        </div>
+      </div>
+    </div>
     
     <!-- Stone Parameters -->
     <div class="section">
@@ -897,6 +931,36 @@ function updatePreview() {
 document.addEventListener('DOMContentLoaded', function() {
   initViewer();
   initRangeValues();
+  // Apply the viewer background settings UI
+  function applyBackgroundSettings() {
+    const viewer = document.getElementById('viewer');
+    const type = document.getElementById('background_type').value;
+    const c1 = document.getElementById('bg_color1').value;
+    const c2 = document.getElementById('bg_color2').value;
+
+    if (!renderer) return;
+
+    if (type === 'solid') {
+      // set renderer clear color to the chosen solid color (opaque)
+      const intColor = parseInt(c1.replace('#',''), 16);
+      renderer.setClearColor(intColor, 1);
+      viewer.style.background = c1;
+      document.getElementById('bg_color2_group').style.display = 'none';
+    } else {
+      // Use transparent canvas and let CSS show the gradient behind
+      renderer.setClearColor(0x000000, 0);
+      viewer.style.background = `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
+      document.getElementById('bg_color2_group').style.display = 'block';
+    }
+  }
+
+  // Hook up background controls
+  document.getElementById('background_type').addEventListener('change', applyBackgroundSettings);
+  document.getElementById('bg_color1').addEventListener('input', applyBackgroundSettings);
+  document.getElementById('bg_color2').addEventListener('input', applyBackgroundSettings);
+
+  // Apply initial background
+  applyBackgroundSettings();
 });
 </script>
 </body>

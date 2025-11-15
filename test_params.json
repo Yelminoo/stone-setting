@@ -1,0 +1,17 @@
+{
+  "stone_shape": "round",
+  "stone_width": 6.0,
+  "stone_length": 6.0,
+  "stone_depth": 4.0,
+  "ring_outer_radius": 9.0,
+  "ring_inner_radius": 7.5,
+  "ring_thickness": 2.0,
+  "ring_profile": "rounded",
+  "ring_tube_radius": 1.0,
+  "prong_count": 4,
+  "prong_thickness_base": 0.6,
+  "prong_thickness_top": 0.4,
+  "setting_height": 3.0,
+  "base_type": "ring",
+  "debug_markers": true
+}

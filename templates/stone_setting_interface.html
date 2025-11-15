@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parametric Stone Setting Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #ffd700;
+        }
+
+        select option {
+            background: #667eea;
+            color: #fff;
+        }
+
+        .dimension-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .dimension-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .prong-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .prong-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .prong-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .prong-btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            border: none;
+            border-radius: 10px;
+            color: #333;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #viewer {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .output-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .output-section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .download-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .download-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4caf50;
+        }
+
+        .status.warning {
+            background: rgba(255, 152, 0, 0.3);
+            border: 1px solid #ff9800;
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+
+        .warning-list {
+            margin-top: 10px;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffd700;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        small {
+            display: block;
+            margin-top: 5px;
+            opacity: 0.7;
+            font-size: 12px;
+        }
+
+        .info-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Control Panel -->
+        <div class="panel">
+            <h1>💎 Stone Setting Generator</h1>
+            <p class="subtitle">Create parametric jewelry stone settings</p>
+
+            <!-- Stone Settings -->
+            <div class="section">
+                <h2>💠 Stone Configuration</h2>
+                
+                <div class="control-group">
+                    <label>Stone Shape</label>
+                    <select id="stoneShape" onchange="updateStoneInputs()">
+                        <option value="round">Round (Brilliant Cut)</option>
+                        <option value="princess">Princess Cut (Square)</option>
+                        <option value="radiant">Radiant Cut (Rectangular)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Stone Dimensions (mm)</label>
+                    <div class="dimension-grid-3" id="stoneDimensions">
+                        <div>
+                            <small>Length</small>
+                            <input type="number" id="stoneLength" value="6.0" step="0.1" min="3" max="15">
+                        </div>
+                        <div>
+                            <small>Width</small>
+                            <input type="number" id="stoneWidth" value="6.0" step="0.1" min="3" max="15">
+                        </div>
+                        <div>
+                            <small>Depth</small>
+                            <input type="number" id="stoneDepth" value="7.2" step="0.1" min="3" max="15">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prong Settings -->
+            <div class="section">
+                <h2>🔧 Prong Configuration</h2>
+                
+                <div class="control-group">
+                    <label>Number of Prongs</label>
+                    <div class="prong-buttons">
+                        <button class="prong-btn" onclick="selectProngCount(2)">2</button>
+                        <button class="prong-btn active" onclick="selectProngCount(4)">4</button>
+                        <button class="prong-btn" onclick="selectProngCount(6)">6</button>
+                        <button class="prong-btn" onclick="selectProngCount(8)">8</button>
+                    </div>
+                    <input type="hidden" id="prongCount" value="4">
+                </div>
+
+                <div class="control-group">
+                    <label>Prong Thickness (mm)</label>
+                    <div class="dimension-grid">
+                        <div>
+                            <small>At Base</small>
+                            <input type="number" id="prongThicknessBase" value="0.4" step="0.05" min="0.1" max="1.5">
+                        </div>
+                        <div>
+                            <small>At Top</small>
+                            <input type="number" id="prongThicknessTop" value="0.3" step="0.05" min="0.1" max="1.5">
+                        </div>
+                    </div>
+                    <small>Tapered pyramid shape for elegant appearance</small>
+                </div>
+
+                <div class="control-group">
+                    <label>Setting Height (mm) <span class="info-badge">Distance from ring to stone</span></label>
+                    <input type="number" id="settingHeight" value="3.0" step="0.1" min="1" max="10">
+                </div>
+            </div>
+
+            <!-- Ring Settings -->
+            <div class="section">
+                <h2>⭕ Ring Configuration</h2>
+                
+                <div class="control-group">
+                    <label>Ring Size (Inner Diameter mm)</label>
+                    <input type="number" id="ringSize" value="17.0" step="0.5" min="14" max="22">
+                    <small>Standard US size 7 ≈ 17.3mm</small>
+                </div>
+
+                <div class="control-group">
+                    <label>Ring Band Thickness (mm)</label>
+                    <input type="number" id="ringThickness" value="2.0" step="0.1" min="1" max="5">
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <button class="generate-btn" onclick="generateSetting()">
+                ✨ Generate Stone Setting
+            </button>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="panel preview-panel">
+            <div id="viewer">
+                <div class="loading" id="loadingIndicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generating stone setting...</p>
+                </div>
+            </div>
+
+            <div class="output-section" id="outputSection" style="display: none;">
+                <div class="status" id="statusMessage"></div>
+                
+                <h3>📥 Download Files</h3>
+                <div class="download-buttons">
+                    <a class="download-btn" id="downloadDesigner" href="#" download>
+                        🎨 Designer Version
+                        <small style="display: block; margin-top: 5px;">(with stone)</small>
+                    </a>
+                    <a class="download-btn" id="downloadProduction" href="#" download>
+                        🏭 Production Version
+                        <small style="display: block; margin-top: 5px;">(ready for manufacturing)</small>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+
+        // Initialize Three.js viewer
+        function initViewer() {
+            const viewerElement = document.getElementById('viewer');
+            const width = viewerElement.clientWidth;
+            const height = viewerElement.clientHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(30, 30, 30);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            viewerElement.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(5, 10, 7);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-5, 5, -7);
+            scene.add(directionalLight2);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(50, 50, 0x666666, 0x333333);
+            scene.add(gridHelper);
+
+            // Animate
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const viewerElement = document.getElementById('viewer');
+            const width = viewerElement.clientWidth;
+            const height = viewerElement.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function loadModel(filename) {
+            // Remove current model
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                `/preview/${filename}`,
+                function(gltf) {
+                    currentModel = gltf.scene;
+                    scene.add(currentModel);
+
+                    // Center model
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    currentModel.position.sub(center);
+
+                    // Adjust camera
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
+                    camera.lookAt(0, 0, 0);
+                },
+                undefined,
+                function(error) {
+                    console.error('Error loading model:', error);
+                }
+            );
+        }
+
+        function updateStoneInputs() {
+            const shape = document.getElementById('stoneShape').value;
+            const lengthInput = document.getElementById('stoneLength');
+            const widthInput = document.getElementById('stoneWidth');
+
+            if (shape === 'round') {
+                lengthInput.value = widthInput.value;
+            }
+        }
+
+        function selectProngCount(count) {
+            document.getElementById('prongCount').value = count;
+            document.querySelectorAll('.prong-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        async function generateSetting() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const outputSection = document.getElementById('outputSection');
+            const statusMessage = document.getElementById('statusMessage');
+            const generateBtn = document.querySelector('.generate-btn');
+
+            // Collect parameters
+            const params = {
+                stoneShape: document.getElementById('stoneShape').value,
+                stoneLength: parseFloat(document.getElementById('stoneLength').value),
+                stoneWidth: parseFloat(document.getElementById('stoneWidth').value),
+                stoneDepth: parseFloat(document.getElementById('stoneDepth').value),
+                prongCount: parseInt(document.getElementById('prongCount').value),
+                prongThicknessBase: parseFloat(document.getElementById('prongThicknessBase').value),
+                prongThicknessTop: parseFloat(document.getElementById('prongThicknessTop').value),
+                settingHeight: parseFloat(document.getElementById('settingHeight').value),
+                ringSize: parseFloat(document.getElementById('ringSize').value),
+                ringThickness: parseFloat(document.getElementById('ringThickness').value)
+            };
+
+            // Show loading
+            loadingIndicator.style.display = 'block';
+            outputSection.style.display = 'none';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update status
+                    statusMessage.className = 'status ' + (result.warnings.length > 0 ? 'warning' : 'success');
+                    statusMessage.style.display = 'block';
+                    
+                    let statusHTML = result.warnings.length > 0 
+                        ? '⚠️ Generated with warnings:' 
+                        : '✅ Stone setting generated successfully!';
+                    
+                    if (result.warnings.length > 0) {
+                        statusHTML += '<ul class="warning-list">';
+                        result.warnings.forEach(warning => {
+                            statusHTML += `<li>${warning}</li>`;
+                        });
+                        statusHTML += '</ul>';
+                    }
+                    
+                    statusMessage.innerHTML = statusHTML;
+
+                    // Update download links
+                    document.getElementById('downloadDesigner').href = `/download/${result.designer_file}`;
+                    document.getElementById('downloadProduction').href = `/download/${result.production_file}`;
+
+                    // Load model in viewer
+                    loadModel(result.designer_file);
+
+                    // Show output section
+                    outputSection.style.display = 'block';
+                } else {
+                    statusMessage.className = 'status error';
+                    statusMessage.style.display = 'block';
+                    statusMessage.innerHTML = `❌ Error: ${result.error}`;
+                    outputSection.style.display = 'block';
+                }
+            } catch (error) {
+                statusMessage.className = 'status error';
+                statusMessage.style.display = 'block';
+                statusMessage.innerHTML = `❌ Error: ${error.message}`;
+                outputSection.style.display = 'block';
+            } finally {
+                loadingIndicator.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        }
+
+        // Initialize viewer on page load
+        window.addEventListener('load', initViewer);
+
+        // Sync round stone dimensions
+        document.getElementById('stoneLength').addEventListener('input', function() {
+            if (document.getElementById('stoneShape').value === 'round') {
+                document.getElementById('stoneWidth').value = this.value;
+            }
+        });
+
+        document.getElementById('stoneWidth').addEventListener('input', function() {
+            if (document.getElementById('stoneShape').value === 'round') {
+                document.getElementById('stoneLength').value = this.value;
+            }
+        });
+    </script>
+</body>
+</html>

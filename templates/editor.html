@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Stone Setting Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .viewer {
+            position: relative;
+            background: #1a1a2e;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .param-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .param-group h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param {
+            margin-bottom: 15px;
+        }
+
+        .param label {
+            display: block;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .param input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .param input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .param input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+
+        .param input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .param select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .value-display {
+            float: right;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #333;
+            min-width: 200px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats h4 {
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .stats div {
+            margin-bottom: 4px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .error {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-icon {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>⚙️ Stone Setting Editor</h1>
+
+            <div class="param-group">
+                <h3>💎 Stone Parameters</h3>
+                <div class="param">
+                    <label>
+                        Stone Size (mm)
+                        <span class="value-display" id="stoneSizeValue">6.0</span>
+                    </label>
+                    <input type="range" id="stoneSize" min="3" max="12" step="0.5" value="6.0">
+                </div>
+                <div class="param">
+                    <label>
+                        Stone Depth (mm)
+                        <span class="value-display" id="stoneDepthValue">7.2</span>
+                    </label>
+                    <input type="range" id="stoneDepth" min="4" max="15" step="0.1" value="7.2">
+                </div>
+                <div class="param">
+                    <label>Stone Shape</label>
+                    <select id="stoneShape">
+                        <option value="round" selected>Round Brilliant</option>
+                        <option value="princess">Princess</option>
+                        <option value="radiant">Radiant</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="param-group">
+                <h3>🔧 Prong Parameters</h3>
+                <div class="param">
+                    <label>Prong Count</label>
+                    <select id="prongCount">
+                        <option value="2">2 Prongs</option>
+                        <option value="4" selected>4 Prongs</option>
+                        <option value="6">6 Prongs</option>
+                        <option value="8">8 Prongs</option>
+                    </select>
+                </div>
+                <div class="param">
+                    <label>
+                        Base Thickness (mm)
+                        <span class="value-display" id="prongThicknessBaseValue">0.4</span>
+                    </label>
+                    <input type="range" id="prongThicknessBase" min="0.2" max="1.0" step="0.05" value="0.4">
+                </div>
+                <div class="param">
+                    <label>
+                        Top Thickness (mm)
+                        <span class="value-display" id="prongThicknessTopValue">0.3</span>
+                    </label>
+                    <input type="range" id="prongThicknessTop" min="0.1" max="0.8" step="0.05" value="0.3">
+                </div>
+            </div>
+
+            <div class="param-group">
+                <h3>💍 Ring Parameters</h3>
+                <div class="param">
+                    <label>
+                        Setting Height (mm)
+                        <span class="value-display" id="settingHeightValue">3.0</span>
+                    </label>
+                    <input type="range" id="settingHeight" min="1.0" max="6.0" step="0.1" value="3.0">
+                </div>
+                <div class="param">
+                    <label>
+                        Ring Size (mm)
+                        <span class="value-display" id="ringSizeValue">8.5</span>
+                    </label>
+                    <input type="range" id="ringSize" min="6.0" max="12.0" step="0.5" value="8.5">
+                </div>
+                <div class="param">
+                    <label>
+                        Ring Thickness (mm)
+                        <span class="value-display" id="ringThicknessValue">1.0</span>
+                    </label>
+                    <input type="range" id="ringThickness" min="0.5" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+
+            <div class="param-group">
+                <h3>💾 Download</h3>
+                <button class="download-btn" id="downloadDesigner" style="width:100%; padding:12px; margin-bottom:10px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px;">
+                    📦 Download Designer Version
+                </button>
+                <button class="download-btn" id="downloadProduction" style="width:100%; padding:12px; background:#764ba2; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px;">
+                    🏭 Download Production Version
+                </button>
+            </div>
+        </div>
+
+        <div class="viewer">
+            <canvas id="canvas"></canvas>
+            
+            <div class="stats">
+                <h4>📊 Model Stats</h4>
+                <div><strong>Vertices:</strong> <span id="vertices">-</span></div>
+                <div><strong>Faces:</strong> <span id="faces">-</span></div>
+                <div><strong>Status:</strong> <span id="status">Ready</span></div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div>Generating model...</div>
+                <div class="spinner"></div>
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Three.js setup
+        const canvas = document.getElementById('canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x404050);  // Lighter background
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(20, 15, 20);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth - 350, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 3.0;  // Much brighter
+        renderer.outputEncoding = THREE.sRGBEncoding;
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting - MAXIMUM brightness
+        const ambientLight = new THREE.AmbientLight(0xffffff, 4.0);  // Super bright
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
+        directionalLight.position.set(10, 10, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 3.0);
+        directionalLight2.position.set(-10, 5, -5);
+        scene.add(directionalLight2);
+
+        const directionalLight3 = new THREE.DirectionalLight(0xffffff, 2.0);
+        directionalLight3.position.set(0, -5, 0);
+        scene.add(directionalLight3);
+
+        // Add spot lights
+        const spotLight1 = new THREE.SpotLight(0xffffff, 3.0);
+        spotLight1.position.set(15, 20, 10);
+        spotLight1.angle = Math.PI / 6;
+        spotLight1.penumbra = 0.3;
+        scene.add(spotLight1);
+
+        const spotLight2 = new THREE.SpotLight(0xffffff, 3.0);
+        spotLight2.position.set(-15, 15, -10);
+        spotLight2.angle = Math.PI / 6;
+        spotLight2.penumbra = 0.3;
+        scene.add(spotLight2);
+
+        // Add point lights
+        const pointLight = new THREE.PointLight(0xffffff, 3.0, 100);
+        pointLight.position.set(0, 15, 0);
+        scene.add(pointLight);
+
+        const pointLight2 = new THREE.PointLight(0xffffff, 2.0, 100);
+        pointLight2.position.set(5, 10, 5);
+        scene.add(pointLight2);
+
+        const pointLight3 = new THREE.PointLight(0xffffff, 2.0, 100);
+        pointLight3.position.set(-5, 10, -5);
+        scene.add(pointLight3);
+
+        // Add hemisphere light
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xaaaaaa, 3.0);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+        scene.add(gridHelper);
+
+        let currentModel = null;
+        let generateTimeout = null;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth - 350;
+            const height = window.innerHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        // Load model
+        async function loadModel(filename) {
+            const loader = new GLTFLoader();
+            
+            return new Promise((resolve, reject) => {
+                loader.load(
+                    `/api/model/${filename}?t=${Date.now()}`,
+                    (gltf) => {
+                        if (currentModel) {
+                            scene.remove(currentModel);
+                        }
+                        
+                        currentModel = gltf.scene;
+                        
+                        // Debug: log all meshes found
+                        console.log('Loading model, found meshes:');
+                        let meshCount = 0;
+                        
+                        // Apply materials based on node/geometry name
+                        currentModel.traverse((child) => {
+                            if (child.isMesh) {
+                                const name = (child.name || child.geometry.name || child.parent?.name || '').toLowerCase();
+                                console.log(`Mesh ${meshCount}: name="${child.name}", geom="${child.geometry.name}", parent="${child.parent?.name}"`);
+                                
+                                if (name.includes('stone')) {
+                                    // Stone - solid white with minimal transparency
+                                    console.log('  -> Applying DIAMOND material');
+                                    child.material = new THREE.MeshStandardMaterial({
+                                        color: 0xffffff,
+                                        metalness: 0,
+                                        roughness: 0.2,
+                                        transparent: true,
+                                        opacity: 0.95,
+                                        side: THREE.DoubleSide
+                                    });
+                                } else {
+                                    // Ring and prongs - bright silver metallic
+                                    console.log('  -> Applying SILVER material');
+                                    child.material = new THREE.MeshStandardMaterial({
+                                        color: 0xF5F5F5,  // Very bright silver
+                                        metalness: 0.95,
+                                        roughness: 0.15,
+                                        emissive: 0x333333,  // Self-glow
+                                        emissiveIntensity: 0.2,
+                                        side: THREE.DoubleSide
+                                    });
+                                }
+                                
+                                // Force material update
+                                child.material.needsUpdate = true;
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                                meshCount++;
+                            }
+                        });
+                        
+                        scene.add(currentModel);
+                        resolve();
+                    },
+                    undefined,
+                    reject
+                );
+            });
+        }
+
+        // Generate model
+        async function generateModel() {
+            const params = {
+                stoneSize: parseFloat(document.getElementById('stoneSize').value),
+                stoneDepth: parseFloat(document.getElementById('stoneDepth').value),
+                stoneShape: document.getElementById('stoneShape').value,
+                prongCount: parseInt(document.getElementById('prongCount').value),
+                prongThicknessBase: parseFloat(document.getElementById('prongThicknessBase').value),
+                prongThicknessTop: parseFloat(document.getElementById('prongThicknessTop').value),
+                settingHeight: parseFloat(document.getElementById('settingHeight').value),
+                ringSize: parseFloat(document.getElementById('ringSize').value),
+                ringThickness: parseFloat(document.getElementById('ringThickness').value)
+            };
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('status').textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    await loadModel(data.file);
+                    document.getElementById('vertices').textContent = data.vertices.toLocaleString();
+                    document.getElementById('faces').textContent = data.faces.toLocaleString();
+                    document.getElementById('status').textContent = 'Ready';
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+                document.getElementById('error').classList.add('active');
+                document.getElementById('status').textContent = 'Error';
+                setTimeout(() => {
+                    document.getElementById('error').classList.remove('active');
+                }, 5000);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        // Debounced generate
+        function scheduleGenerate() {
+            clearTimeout(generateTimeout);
+            generateTimeout = setTimeout(generateModel, 500);
+            
+            // Hide download button when parameters change
+            document.getElementById('downloadBtn').style.display = 'none';
+        }
+
+        // Setup inputs
+        function setupInput(id) {
+            const input = document.getElementById(id);
+            const valueDisplay = document.getElementById(id + 'Value');
+            
+            if (input.type === 'range') {
+                input.addEventListener('input', (e) => {
+                    valueDisplay.textContent = e.target.value;
+                    scheduleGenerate();
+                });
+            } else {
+                input.addEventListener('change', scheduleGenerate);
+            }
+        }
+
+        // Initialize all inputs
+        ['stoneSize', 'stoneDepth', 'stoneShape', 'prongCount', 
+         'prongThicknessBase', 'prongThicknessTop', 'settingHeight', 
+         'ringSize', 'ringThickness'].forEach(setupInput);
+
+        // Download handlers
+        document.getElementById('downloadDesigner').addEventListener('click', () => {
+            window.open('/api/download/designer', '_blank');
+        });
+
+        document.getElementById('downloadProduction').addEventListener('click', () => {
+            window.open('/api/download/production', '_blank');
+        });
+
+        // Initial generation
+        generateModel();
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Original Ring Geometry</title>
+</head>
+<body>
+    <h1>Testing Original Ring Geometry Loading</h1>
+    <button onclick="testGeometry()">Test Load Geometry</button>
+    <div id="result"></div>
+
+    <script>
+        async function testGeometry() {
+            const result = document.getElementById('result');
+            try {
+                result.textContent = 'Loading...';
+                const response = await fetch('/original_ring_geometry.json');
+                const data = await response.json();
+
+                let output = `Loaded ${Object.keys(data).length} meshes:\n`;
+                Object.entries(data).forEach(([name, mesh]) => {
+                    output += `${name}: ${mesh.vertices.length} vertices, ${mesh.faces.length} faces\n`;
+                });
+
+                result.textContent = output;
+                console.log('Geometry data:', data);
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
