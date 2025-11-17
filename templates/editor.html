@@ -330,7 +330,7 @@
                         Ring Size (mm)
                         <span class="value-display" id="ringSizeValue">8.5</span>
                     </label>
-                    <input type="range" id="ringSize" min="6.0" max="12.0" step="0.5" value="8.5">
+                    <input type="range" id="ringSize" min="6.0" max="20.0" step="0.5" value="8.5">
                 </div>
                 <div class="param">
                     <label>
@@ -388,7 +388,7 @@
         // Three.js setup
         const canvas = document.getElementById('canvas');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x404050);  // Lighter background
+        scene.background = new THREE.Color(0x505060);  // Medium gray for contrast
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(20, 15, 20);
@@ -396,41 +396,50 @@
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(window.innerWidth - 350, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.enabled = false;  // Disable shadows for now
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 3.0;  // Much brighter
-        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.NoToneMapping;  // Disable tone mapping
+        renderer.toneMappingExposure = 1.0;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
 
-        // Lighting - MAXIMUM brightness
-        const ambientLight = new THREE.AmbientLight(0xffffff, 4.0);  // Super bright
+        // Create environment map for metallic reflections
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+        
+        // Create a simple gradient environment
+        const envScene = new THREE.Scene();
+        envScene.background = new THREE.Color(0xffffff);
+        scene.environment = pmremGenerator.fromScene(envScene).texture;
+
+        // Lighting - Much brighter for visibility
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);  // Very bright ambient
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
         directionalLight.position.set(10, 10, 5);
         directionalLight.castShadow = true;
         scene.add(directionalLight);
 
-        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 3.0);
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 2.0);
         directionalLight2.position.set(-10, 5, -5);
         scene.add(directionalLight2);
 
-        const directionalLight3 = new THREE.DirectionalLight(0xffffff, 2.0);
+        const directionalLight3 = new THREE.DirectionalLight(0xffffff, 1.5);
         directionalLight3.position.set(0, -5, 0);
         scene.add(directionalLight3);
 
-        // Add spot lights
-        const spotLight1 = new THREE.SpotLight(0xffffff, 3.0);
+        // Add spot lights for highlights
+        const spotLight1 = new THREE.SpotLight(0xffffff, 2.0);
         spotLight1.position.set(15, 20, 10);
         spotLight1.angle = Math.PI / 6;
         spotLight1.penumbra = 0.3;
         scene.add(spotLight1);
 
-        const spotLight2 = new THREE.SpotLight(0xffffff, 3.0);
+        const spotLight2 = new THREE.SpotLight(0xffffff, 2.0);
         spotLight2.position.set(-15, 15, -10);
         spotLight2.angle = Math.PI / 6;
         spotLight2.penumbra = 0.3;
@@ -441,16 +450,16 @@
         pointLight.position.set(0, 15, 0);
         scene.add(pointLight);
 
-        const pointLight2 = new THREE.PointLight(0xffffff, 2.0, 100);
+        const pointLight2 = new THREE.PointLight(0xffffff, 2.5, 100);
         pointLight2.position.set(5, 10, 5);
         scene.add(pointLight2);
 
-        const pointLight3 = new THREE.PointLight(0xffffff, 2.0, 100);
+        const pointLight3 = new THREE.PointLight(0xffffff, 2.5, 100);
         pointLight3.position.set(-5, 10, -5);
         scene.add(pointLight3);
 
         // Add hemisphere light
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xaaaaaa, 3.0);
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xaaaaaa, 2.0);
         hemiLight.position.set(0, 20, 0);
         scene.add(hemiLight);
 
@@ -503,25 +512,19 @@
                                 console.log(`Mesh ${meshCount}: name="${child.name}", geom="${child.geometry.name}", parent="${child.parent?.name}"`);
                                 
                                 if (name.includes('stone')) {
-                                    // Stone - solid white with minimal transparency
-                                    console.log('  -> Applying DIAMOND material');
-                                    child.material = new THREE.MeshStandardMaterial({
-                                        color: 0xffffff,
-                                        metalness: 0,
-                                        roughness: 0.2,
+                                    // Stone - pure white, no lighting needed
+                                    console.log('  -> Applying DIAMOND material (WHITE)');
+                                    child.material = new THREE.MeshBasicMaterial({
+                                        color: 0xffffff,  // Pure white
                                         transparent: true,
-                                        opacity: 0.95,
+                                        opacity: 0.9,
                                         side: THREE.DoubleSide
                                     });
                                 } else {
-                                    // Ring and prongs - bright silver metallic
-                                    console.log('  -> Applying SILVER material');
-                                    child.material = new THREE.MeshStandardMaterial({
-                                        color: 0xF5F5F5,  // Very bright silver
-                                        metalness: 0.95,
-                                        roughness: 0.15,
-                                        emissive: 0x333333,  // Self-glow
-                                        emissiveIntensity: 0.2,
+                                    // Ring and prongs - pure silver, no lighting needed
+                                    console.log('  -> Applying SILVER material (BRIGHT SILVER)');
+                                    child.material = new THREE.MeshBasicMaterial({
+                                        color: 0xC8C8C8,  // Bright silver gray
                                         side: THREE.DoubleSide
                                     });
                                 }

@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ring Band Designer - Build123d Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 350px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+        }
+
+        .viewer-panel {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .control-group select,
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .range-container {
+            position: relative;
+        }
+
+        .range-container input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .range-value {
+            position: absolute;
+            right: 0;
+            top: -25px;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #viewer {
+            flex: 1;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            position: relative;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.85em;
+        }
+
+        .stats h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .color-swatch.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .color-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #333;
+        }
+
+        .conditional-params {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .export-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-buttons .btn {
+            width: auto;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💍 Ring Band Designer <span class="badge">Build123d CAD</span></h1>
+        <p>Professional CAD-quality ring band design with real-time 3D preview</p>
+    </div>
+
+    <div class="container">
+        <div class="controls-panel">
+            <h3 class="section-title">⚙️ Band Configuration</h3>
+            
+            <div class="control-group">
+                <label for="bandType">Band Profile</label>
+                <select id="bandType" onchange="updateBandType()">
+                    <option value="basic">Basic Band (Rectangular)</option>
+                    <option value="comfort_fit">Comfort-Fit (Rounded Inner)</option>
+                    <option value="tapered">Tapered (Thicker on Palm)</option>
+                    <option value="domed">Domed (Curved Outer)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="ringSize">Ring Size (US)</label>
+                <select id="ringSize" onchange="updatePreview()">
+                    <option value="7">US 7 (17.35mm)</option>
+                    <option value="7.5">US 7.5 (17.77mm)</option>
+                    <option value="8" selected>US 8 (18.19mm)</option>
+                    <option value="8.5">US 8.5 (18.61mm)</option>
+                    <option value="9">US 9 (19.03mm)</option>
+                    <option value="9.5">US 9.5 (19.43mm)</option>
+                    <option value="10">US 10 (19.84mm)</option>
+                </select>
+            </div>
+
+            <h3 class="section-title">🎨 Material & Appearance</h3>
+
+            <div class="control-group">
+                <label>Metal Color</label>
+                <div class="color-options">
+                    <div class="color-swatch active" style="background: linear-gradient(135deg, #E8E8E8, #C0C0C0);" 
+                         onclick="selectMaterial('silver')" data-material="silver" title="Silver"></div>
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #FFD700, #FFA500);" 
+                         onclick="selectMaterial('gold')" data-material="gold" title="Gold"></div>
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #FFB6C1, #E6A8D7);" 
+                         onclick="selectMaterial('rose_gold')" data-material="rose_gold" title="Rose Gold"></div>
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #E5E4E2, #BCC6CC);" 
+                         onclick="selectMaterial('platinum')" data-material="platinum" title="Platinum"></div>
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #52575D, #36454F);" 
+                         onclick="selectMaterial('titanium')" data-material="titanium" title="Titanium"></div>
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #B87333, #CD7F32);" 
+                         onclick="selectMaterial('bronze')" data-material="bronze" title="Bronze"></div>
+                </div>
+            </div>
+
+            <h3 class="section-title">📏 Dimensions</h3>
+
+            <div id="basicParams">
+                <div class="control-group">
+                    <label for="thickness">Radial Thickness (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessValue">2.0</span>
+                        <input type="range" id="thickness" min="1.0" max="5.0" step="0.1" value="2.0" 
+                               oninput="updateValue('thickness'); updatePreview()">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="bandWidth">Band Width/Height (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="bandWidthValue">3.0</span>
+                        <input type="range" id="bandWidth" min="2.0" max="10.0" step="0.5" value="3.0" 
+                               oninput="updateValue('bandWidth'); updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="comfortParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="innerCurve">Inner Curve Radius (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="innerCurveValue">0.5</span>
+                        <input type="range" id="innerCurve" min="0.3" max="1.5" step="0.1" value="0.5" 
+                               oninput="updateValue('innerCurve'); updatePreview()">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ Rounded inner edge for comfort. Auto-limited to prevent geometry errors.
+                </div>
+            </div>
+
+            <div id="taperedParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="thicknessTop">Thickness - Top (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessTopValue">1.8</span>
+                        <input type="range" id="thicknessTop" min="1.0" max="4.0" step="0.1" value="1.8" 
+                               oninput="updateValue('thicknessTop'); updatePreview()">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="thicknessBottom">Thickness - Bottom/Palm (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessBottomValue">2.5</span>
+                        <input type="range" id="thicknessBottom" min="1.5" max="5.0" step="0.1" value="2.5" 
+                               oninput="updateValue('thicknessBottom'); updatePreview()">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ Tapered profile: thicker on palm side for comfort and durability.
+                </div>
+            </div>
+
+            <div id="domedParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="domeHeight">Dome Height (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="domeHeightValue">1.0</span>
+                        <input type="range" id="domeHeight" min="0.3" max="2.5" step="0.1" value="1.0" 
+                               oninput="updateValue('domeHeight'); updatePreview()">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ Curved outer surface with Bezier profile for elegant dome shape.
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="updatePreview()">
+                🔄 Generate Ring Band
+            </button>
+
+            <div class="stats" id="stats" style="display: none;">
+                <h4>📊 Ring Statistics</h4>
+                <div class="stat-row">
+                    <span class="stat-label">Band Type:</span>
+                    <span class="stat-value" id="statBandType">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">US Size:</span>
+                    <span class="stat-value" id="statRingSize">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Inner Diameter:</span>
+                    <span class="stat-value" id="statDiameter">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Thickness:</span>
+                    <span class="stat-value" id="statThickness">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Band Width:</span>
+                    <span class="stat-value" id="statWidth">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Material:</span>
+                    <span class="stat-value" id="statMaterial">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Volume (approx):</span>
+                    <span class="stat-value" id="statVolume">-</span>
+                </div>
+            </div>
+
+            <div class="export-section">
+                <h3 class="section-title">💾 Export</h3>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary" onclick="exportFile('step')" id="btnExportStep">
+                        📐 STEP
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportFile('stl')" id="btnExportStl">
+                        🖨️ STL
+                    </button>
+                </div>
+                <div class="info-box" style="margin-top: 10px;">
+                    <strong>STEP:</strong> CAD format (FreeCAD, OnShape)<br>
+                    <strong>STL:</strong> 3D printing format
+                </div>
+            </div>
+        </div>
+
+        <div class="viewer-panel">
+            <div id="viewer">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div>Initializing 3D viewer...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+        let scene, camera, renderer, controls;
+        let currentMesh = null;
+        let currentMaterial = 'silver';
+        let envMap = null;
+
+        const materialPresets = {
+            silver: {
+                color: 0xE8E8E8,
+                metalness: 0.95,
+                roughness: 0.15,
+                envMapIntensity: 1.5
+            },
+            gold: {
+                color: 0xFFD700,
+                metalness: 0.98,
+                roughness: 0.1,
+                envMapIntensity: 2.0
+            },
+            rose_gold: {
+                color: 0xE6A8D7,
+                metalness: 0.96,
+                roughness: 0.12,
+                envMapIntensity: 1.8
+            },
+            platinum: {
+                color: 0xE5E4E2,
+                metalness: 0.97,
+                roughness: 0.08,
+                envMapIntensity: 2.2
+            },
+            titanium: {
+                color: 0x8A8D93,
+                metalness: 0.85,
+                roughness: 0.25,
+                envMapIntensity: 1.2
+            },
+            bronze: {
+                color: 0xCD7F32,
+                metalness: 0.92,
+                roughness: 0.18,
+                envMapIntensity: 1.6
+            }
+        };
+
+        function initViewer() {
+            const container = document.getElementById('viewer');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            // Create cube camera for environment reflections
+            const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
+                format: THREE.RGBAFormat,
+                generateMipmaps: true,
+                minFilter: THREE.LinearMipmapLinearFilter
+            });
+            
+            // Create simple environment with gradient
+            const envScene = new THREE.Scene();
+            const skyColor = new THREE.Color(0x4a5568);
+            const groundColor = new THREE.Color(0x1a202c);
+            
+            const envHemiLight = new THREE.HemisphereLight(skyColor, groundColor, 1);
+            envScene.add(envHemiLight);
+            
+            const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+            cubeCamera.update(renderer, envScene);
+            envMap = cubeRenderTarget.texture;
+            
+            scene.environment = envMap;
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                50,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(30, 20, 30);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: false,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.8;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.physicallyCorrectLights = true;
+            container.appendChild(renderer.domElement);
+            
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 10;
+            controls.maxDistance = 100;
+            controls.autoRotate = false;
+            controls.autoRotateSpeed = 0.5;
+            
+            // Enhanced Lighting Setup
+            // Ambient light (soft fill)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            // Key light (main) - stronger
+            const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            keyLight.position.set(10, 15, 10);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 2048;
+            keyLight.shadow.mapSize.height = 2048;
+            keyLight.shadow.camera.near = 0.5;
+            keyLight.shadow.camera.far = 50;
+            keyLight.shadow.bias = -0.0001;
+            scene.add(keyLight);
+            
+            // Fill light (soften shadows) - stronger
+            const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            fillLight.position.set(-8, 8, -8);
+            scene.add(fillLight);
+            
+            // Rim light (edge highlight) - stronger  
+            const rimLight = new THREE.DirectionalLight(0xaabbff, 1.2);
+            rimLight.position.set(0, 5, -15);
+            scene.add(rimLight);
+            
+            // Point lights for sparkle - stronger
+            const sparkleLight1 = new THREE.PointLight(0xffffff, 1.5, 50);
+            sparkleLight1.position.set(15, 10, 15);
+            scene.add(sparkleLight1);
+            
+            const sparkleLight2 = new THREE.PointLight(0xffffcc, 1.2, 50);
+            sparkleLight2.position.set(-15, 10, -15);
+            scene.add(sparkleLight2);
+            
+            // Hemisphere light for realistic ambient - stronger
+            const hemiLight2 = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+            scene.add(hemiLight2);
+            
+            // Grid with better visibility
+            const gridHelper = new THREE.GridHelper(50, 50, 0x555555, 0x222222);
+            gridHelper.position.y = -0.5;
+            scene.add(gridHelper);
+            
+            // Animate
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        async function loadRing() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            loading.querySelector('div:last-child').textContent = 'Generating ring band...';
+            
+            try {
+                // Get parameters
+                const params = {
+                    band_type: document.getElementById('bandType').value,
+                    ring_size: parseFloat(document.getElementById('ringSize').value),
+                    thickness: parseFloat(document.getElementById('thickness').value),
+                    band_width: parseFloat(document.getElementById('bandWidth').value),
+                };
+                
+                // Add conditional parameters
+                if (params.band_type === 'comfort_fit') {
+                    params.inner_curve = parseFloat(document.getElementById('innerCurve').value);
+                } else if (params.band_type === 'tapered') {
+                    params.thickness_top = parseFloat(document.getElementById('thicknessTop').value);
+                    params.thickness_bottom = parseFloat(document.getElementById('thicknessBottom').value);
+                } else if (params.band_type === 'domed') {
+                    params.dome_height = parseFloat(document.getElementById('domeHeight').value);
+                }
+                
+                // Generate ring
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate ring');
+                }
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                // Load GLB
+                const loader = new GLTFLoader();
+                loader.load(url, (gltf) => {
+                    // Remove old mesh
+                    if (currentMesh) {
+                        scene.remove(currentMesh);
+                    }
+                    
+                    currentMesh = gltf.scene;
+                    
+                    // Apply material with current preset
+                    applyMaterialToMesh(currentMesh, currentMaterial);
+                    
+                    scene.add(currentMesh);
+                    
+                    // Center the ring
+                    const box = new THREE.Box3().setFromObject(currentMesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    currentMesh.position.sub(center);
+                    currentMesh.position.y = 0;
+                    
+                    // Adjust camera if needed
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    camera.position.set(maxDim * 1.5, maxDim * 1.0, maxDim * 1.5);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+                    
+                    // Update stats
+                    updateStats(params);
+                    
+                    loading.style.display = 'none';
+                    URL.revokeObjectURL(url);
+                });
+                
+            } catch (error) {
+                console.error('Error loading ring:', error);
+                loading.querySelector('div:last-child').textContent = 'Error: ' + error.message;
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function updateStats(params) {
+            const stats = document.getElementById('stats');
+            stats.style.display = 'block';
+            
+            const bandTypeNames = {
+                'basic': 'Basic (Rectangular)',
+                'comfort_fit': 'Comfort-Fit',
+                'tapered': 'Tapered',
+                'domed': 'Domed'
+            };
+            
+            const sizeDiameters = {
+                7: 17.35, 7.5: 17.77, 8: 18.19, 8.5: 18.61,
+                9: 19.03, 9.5: 19.43, 10: 19.84
+            };
+            
+            document.getElementById('statBandType').textContent = bandTypeNames[params.band_type];
+            document.getElementById('statRingSize').textContent = `US ${params.ring_size}`;
+            document.getElementById('statDiameter').textContent = `${sizeDiameters[params.ring_size].toFixed(2)} mm`;
+            document.getElementById('statThickness').textContent = `${params.thickness.toFixed(2)} mm`;
+            document.getElementById('statWidth').textContent = `${params.band_width.toFixed(2)} mm`;
+            
+            // Calculate approximate volume (π * r * thickness * width)
+            const innerRadius = sizeDiameters[params.ring_size] / 2;
+            const outerRadius = innerRadius + params.thickness;
+            const volume = Math.PI * (outerRadius * outerRadius - innerRadius * innerRadius) * params.band_width;
+            document.getElementById('statVolume').textContent = `${volume.toFixed(2)} mm³`;
+            
+            // Update material name
+            const materialNames = {
+                'silver': 'Silver',
+                'gold': 'Gold',
+                'rose_gold': 'Rose Gold',
+                'platinum': 'Platinum',
+                'titanium': 'Titanium',
+                'bronze': 'Bronze'
+            };
+            document.getElementById('statMaterial').textContent = materialNames[currentMaterial];
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initViewer();
+            loadRing();
+        });
+
+        function applyMaterialToMesh(mesh, materialType) {
+            const preset = materialPresets[materialType];
+            
+            mesh.traverse((child) => {
+                if (child.isMesh) {
+                    // Dispose old material
+                    if (child.material) {
+                        child.material.dispose();
+                    }
+                    
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color(preset.color),
+                        metalness: preset.metalness,
+                        roughness: preset.roughness,
+                        envMapIntensity: preset.envMapIntensity,
+                        envMap: envMap,
+                        side: THREE.FrontSide,
+                        flatShading: false,
+                    });
+                    
+                    // Force material update
+                    child.material.needsUpdate = true;
+                    
+                    // Ensure geometry is properly set up
+                    if (child.geometry) {
+                        child.geometry.computeVertexNormals();
+                        child.geometry.computeBoundingBox();
+                        child.geometry.computeBoundingSphere();
+                    }
+                    
+                    // Enable shadows
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            // Force render update
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Global functions
+        window.updatePreview = loadRing;
+        
+        window.selectMaterial = (material) => {
+            currentMaterial = material;
+            
+            // Update UI
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.remove('active');
+            });
+            document.querySelector(`[data-material="${material}"]`).classList.add('active');
+            
+            // Update mesh if it exists
+            if (currentMesh) {
+                applyMaterialToMesh(currentMesh, material);
+            }
+        };
+        
+        window.updateValue = (id) => {
+            const input = document.getElementById(id);
+            const display = document.getElementById(id + 'Value');
+            display.textContent = parseFloat(input.value).toFixed(1);
+        };
+        
+        window.updateBandType = () => {
+            const bandType = document.getElementById('bandType').value;
+            
+            // Hide all conditional params
+            document.getElementById('comfortParams').style.display = 'none';
+            document.getElementById('taperedParams').style.display = 'none';
+            document.getElementById('domedParams').style.display = 'none';
+            
+            // Show relevant params
+            if (bandType === 'comfort_fit') {
+                document.getElementById('comfortParams').style.display = 'block';
+            } else if (bandType === 'tapered') {
+                document.getElementById('taperedParams').style.display = 'block';
+            } else if (bandType === 'domed') {
+                document.getElementById('domedParams').style.display = 'block';
+            }
+            
+            updatePreview();
+        };
+        
+        window.exportFile = async (format) => {
+            const button = format === 'step' ? 
+                document.getElementById('btnExportStep') : 
+                document.getElementById('btnExportStl');
+            
+            button.disabled = true;
+            button.textContent = '⏳ Exporting...';
+            
+            try {
+                // Get parameters
+                const params = {
+                    band_type: document.getElementById('bandType').value,
+                    ring_size: parseFloat(document.getElementById('ringSize').value),
+                    thickness: parseFloat(document.getElementById('thickness').value),
+                    band_width: parseFloat(document.getElementById('bandWidth').value),
+                };
+                
+                // Add conditional parameters
+                if (params.band_type === 'comfort_fit') {
+                    params.inner_curve = parseFloat(document.getElementById('innerCurve').value);
+                } else if (params.band_type === 'tapered') {
+                    params.thickness_top = parseFloat(document.getElementById('thicknessTop').value);
+                    params.thickness_bottom = parseFloat(document.getElementById('thicknessBottom').value);
+                } else if (params.band_type === 'domed') {
+                    params.dome_height = parseFloat(document.getElementById('domeHeight').value);
+                }
+                
+                // Export
+                const response = await fetch(`/export/${format}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ring_band_${params.band_type}_size${params.ring_size}.${format}`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                button.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    button.textContent = format === 'step' ? '📐 STEP' : '🖨️ STL';
+                    button.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                button.textContent = '❌ Error';
+                setTimeout(() => {
+                    button.textContent = format === 'step' ? '📐 STEP' : '🖨️ STL';
+                    button.disabled = false;
+                }, 2000);
+            }
+        };
+    </script>
+</body>
+</html>

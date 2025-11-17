@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ring Band Designer - YACV Professional Viewer</title>
+    
+    <!-- Yet Another CAD Viewer CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yet-another-cad-viewer@latest/dist/yacv.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 350px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+        }
+
+        .viewer-panel {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .control-group select,
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .range-container {
+            position: relative;
+        }
+
+        .range-container input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .range-value {
+            position: absolute;
+            right: 0;
+            top: -25px;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #viewer {
+            flex: 1;
+            border-radius: 10px;
+            background: #1a1a2e;
+            position: relative;
+            min-height: 600px;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #333;
+        }
+
+        .conditional-params {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .export-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-buttons .btn {
+            width: auto;
+            flex: 1;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2em;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .viewer-info {
+            background: #4a5568;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+        }
+
+        .viewer-info strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💍 Ring Band Designer <span class="badge">YACV Pro Viewer</span></h1>
+        <p>Professional CAD viewer with interactive inspection, measurements & clipping planes</p>
+    </div>
+
+    <div class="container">
+        <div class="controls-panel">
+            <h3 class="section-title">⚙️ Band Configuration</h3>
+            
+            <div class="control-group">
+                <label for="bandType">Band Profile</label>
+                <select id="bandType" onchange="updateBandType()">
+                    <option value="basic">Basic Band (Rectangular)</option>
+                    <option value="comfort_fit">Comfort-Fit (Rounded Inner)</option>
+                    <option value="tapered">Tapered (Thicker on Palm)</option>
+                    <option value="domed">Domed (Curved Outer)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="ringSize">Ring Size (US)</label>
+                <select id="ringSize" onchange="updatePreview()">
+                    <option value="7">US 7 (17.35mm)</option>
+                    <option value="7.5">US 7.5 (17.77mm)</option>
+                    <option value="8" selected>US 8 (18.19mm)</option>
+                    <option value="8.5">US 8.5 (18.61mm)</option>
+                    <option value="9">US 9 (19.03mm)</option>
+                    <option value="9.5">US 9.5 (19.43mm)</option>
+                    <option value="10">US 10 (19.84mm)</option>
+                </select>
+            </div>
+
+            <h3 class="section-title">📏 Dimensions</h3>
+
+            <div id="basicParams">
+                <div class="control-group">
+                    <label for="thickness">Radial Thickness (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessValue">2.0</span>
+                        <input type="range" id="thickness" min="1.0" max="5.0" step="0.1" value="2.0" 
+                               oninput="updateValue('thickness'); updatePreview()">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="bandWidth">Band Width/Height (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="bandWidthValue">3.0</span>
+                        <input type="range" id="bandWidth" min="2.0" max="10.0" step="0.5" value="3.0" 
+                               oninput="updateValue('bandWidth'); updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="comfortParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="innerCurve">Inner Curve Radius (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="innerCurveValue">0.5</span>
+                        <input type="range" id="innerCurve" min="0.3" max="1.5" step="0.1" value="0.5" 
+                               oninput="updateValue('innerCurve'); updatePreview()">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ Rounded inner edge for comfort.
+                </div>
+            </div>
+
+            <div id="taperedParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="thicknessTop">Thickness - Top (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessTopValue">1.8</span>
+                        <input type="range" id="thicknessTop" min="1.0" max="4.0" step="0.1" value="1.8" 
+                               oninput="updateValue('thicknessTop'); updatePreview()">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="thicknessBottom">Thickness - Bottom/Palm (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="thicknessBottomValue">2.5</span>
+                        <input type="range" id="thicknessBottom" min="1.5" max="5.0" step="0.1" value="2.5" 
+                               oninput="updateValue('thicknessBottom'); updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="domedParams" style="display: none;" class="conditional-params">
+                <div class="control-group">
+                    <label for="domeHeight">Dome Height (mm)</label>
+                    <div class="range-container">
+                        <span class="range-value" id="domeHeightValue">1.0</span>
+                        <input type="range" id="domeHeight" min="0.3" max="2.5" step="0.1" value="1.0" 
+                               oninput="updateValue('domeHeight'); updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="updatePreview()">
+                🔄 Generate Ring Band
+            </button>
+
+            <div class="export-section">
+                <h3 class="section-title">💾 Export</h3>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary" onclick="exportFile('step')">
+                        📐 STEP
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportFile('stl')">
+                        🖨️ STL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="viewer-panel">
+            <div class="viewer-info">
+                <strong>🎨 YACV Professional Features:</strong>
+                • Click faces/edges to inspect • Measure distances • Clip with planes • Adjust transparency • Rotate/Pan/Zoom
+            </div>
+            <div id="viewer">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div>Initializing CAD viewer...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yet Another CAD Viewer Script -->
+    <script src="https://cdn.jsdelivr.net/npm/yet-another-cad-viewer@latest/dist/yacv.js"></script>
+
+    <script>
+        let viewer = null;
+        let currentParams = {};
+
+        // Initialize YACV viewer
+        function initViewer() {
+            const viewerContainer = document.getElementById('viewer');
+            
+            try {
+                viewer = new YACV.Viewer(viewerContainer, {
+                    theme: 'dark',
+                    showAxes: true,
+                    showGrid: true,
+                    enableSelection: true,
+                    enableMeasurement: true,
+                    backgroundColor: '#1a1a2e'
+                });
+                
+                document.getElementById('loading').style.display = 'none';
+                console.log('✅ YACV viewer initialized');
+            } catch (error) {
+                console.error('Error initializing YACV:', error);
+                document.getElementById('loading').innerHTML = 
+                    '<div style="color: #ff6b6b;">⚠️ YACV not loaded. Using fallback...</div>';
+                // Initialize will be retried when first model is loaded
+            }
+        }
+
+        async function loadRing() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            loading.querySelector('div:last-child').textContent = 'Generating ring...';
+            
+            try {
+                // Get parameters
+                const params = {
+                    band_type: document.getElementById('bandType').value,
+                    ring_size: parseFloat(document.getElementById('ringSize').value),
+                    thickness: parseFloat(document.getElementById('thickness').value),
+                    band_width: parseFloat(document.getElementById('bandWidth').value),
+                };
+                
+                // Add conditional parameters
+                if (params.band_type === 'comfort_fit') {
+                    params.inner_curve = parseFloat(document.getElementById('innerCurve').value);
+                } else if (params.band_type === 'tapered') {
+                    params.thickness_top = parseFloat(document.getElementById('thicknessTop').value);
+                    params.thickness_bottom = parseFloat(document.getElementById('thicknessBottom').value);
+                } else if (params.band_type === 'domed') {
+                    params.dome_height = parseFloat(document.getElementById('domeHeight').value);
+                }
+                
+                currentParams = params;
+                
+                // Generate STEP file
+                const response = await fetch('/generate_step', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate ring');
+                }
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+                
+                // Load STEP content into YACV
+                if (viewer) {
+                    await viewer.loadSTEP(result.step_content, {
+                        name: result.filename,
+                        color: '#E8E8E8',
+                        metalness: 0.9,
+                        roughness: 0.2
+                    });
+                    
+                    viewer.fitToView();
+                    loading.style.display = 'none';
+                } else {
+                    throw new Error('Viewer not initialized');
+                }
+                
+            } catch (error) {
+                console.error('Error loading ring:', error);
+                loading.querySelector('div:last-child').textContent = 'Error: ' + error.message;
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function exportFile(format) {
+            try {
+                const response = await fetch(`/export/${format}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentParams)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ring_${currentParams.band_type}_size${currentParams.ring_size}.${format}`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed: ' + error.message);
+            }
+        }
+
+        window.updatePreview = loadRing;
+        
+        window.updateValue = (id) => {
+            const input = document.getElementById(id);
+            const display = document.getElementById(id + 'Value');
+            display.textContent = parseFloat(input.value).toFixed(1);
+        };
+        
+        window.updateBandType = () => {
+            const bandType = document.getElementById('bandType').value;
+            
+            document.getElementById('comfortParams').style.display = 'none';
+            document.getElementById('taperedParams').style.display = 'none';
+            document.getElementById('domedParams').style.display = 'none';
+            
+            if (bandType === 'comfort_fit') {
+                document.getElementById('comfortParams').style.display = 'block';
+            } else if (bandType === 'tapered') {
+                document.getElementById('taperedParams').style.display = 'block';
+            } else if (bandType === 'domed') {
+                document.getElementById('domedParams').style.display = 'block';
+            }
+            
+            updatePreview();
+        };
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initViewer();
+            setTimeout(loadRing, 500); // Load initial ring after viewer init
+        });
+    </script>
+</body>
+</html>

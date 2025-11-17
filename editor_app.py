@@ -83,7 +83,7 @@ def generate():
         # Adjust prong spread to account for prong thickness
         prong_spread_radius += (params['prong_thickness_base'] / 2)
         
-        stone_radius = prong_spread_radius - 0.25  # Minimal clearance
+        stone_radius = prong_spread_radius - 0.5  # Increased clearance to prevent protrusion
         
         # Create stone based on shape
         actual_prong_spread_radius = prong_spread_radius
@@ -91,23 +91,23 @@ def generate():
         if stone_shape == 'round':
             stone_mesh = create_brilliant_cut_diamond(stone_radius, stone_depth)
         elif stone_shape == 'princess':
-            stone_size_actual = stone_size - 0.1
+            stone_size_actual = stone_size - 0.3  # Increased clearance
             stone_mesh = create_princess_cut_diamond(stone_size_actual, stone_depth)
             # Rotate so corners align with prongs
             prong_count = params['prong_count']
             rotation_angle = (np.pi / prong_count)
             rotation_matrix = trimesh.transformations.rotation_matrix(rotation_angle, [0, 1, 0])
             stone_mesh.apply_transform(rotation_matrix)
-            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.1 + (params['prong_thickness_base'] / 2)
+            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.3 + (params['prong_thickness_base'] / 2)
         elif stone_shape == 'radiant':
-            stone_size_actual = stone_size - 0.1
+            stone_size_actual = stone_size - 0.3  # Increased clearance
             stone_mesh = create_radiant_cut_diamond(stone_size_actual, stone_depth)
             # Rotate so corners align with prongs
             prong_count = params['prong_count']
             rotation_angle = (np.pi / prong_count)
             rotation_matrix = trimesh.transformations.rotation_matrix(rotation_angle, [0, 1, 0])
             stone_mesh.apply_transform(rotation_matrix)
-            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.1 + (params['prong_thickness_base'] / 2)
+            actual_prong_spread_radius = (stone_size / 2) * 1.3 + 0.2 + (params['prong_thickness_base'] / 2)
         else:
             stone_mesh = create_brilliant_cut_diamond(stone_radius, stone_depth)
         
@@ -195,7 +195,7 @@ def download_file(version):
         # Adjust prong spread to account for prong thickness
         prong_spread_radius += (prong_thickness_base / 2)
         
-        stone_radius = prong_spread_radius - 0.25
+        stone_radius = prong_spread_radius - 0.5  # Increased clearance to prevent protrusion
         
         # Create stone based on shape
         actual_prong_spread_radius = prong_spread_radius
@@ -203,19 +203,19 @@ def download_file(version):
         if stone_shape == 'round':
             stone_mesh = create_brilliant_cut_diamond(stone_radius, stone_depth)
         elif stone_shape == 'princess':
-            stone_size_actual = stone_size - 0.1
+            stone_size_actual = stone_size - 0.3  # Increased clearance
             stone_mesh = create_princess_cut_diamond(stone_size_actual, stone_depth)
             rotation_angle = (np.pi / prong_count)
             rotation_matrix = trimesh.transformations.rotation_matrix(rotation_angle, [0, 1, 0])
             stone_mesh.apply_transform(rotation_matrix)
-            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.1 + (prong_thickness_base / 2)
+            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.3 + (prong_thickness_base / 2)
         elif stone_shape == 'radiant':
-            stone_size_actual = stone_size - 0.1
+            stone_size_actual = stone_size - 0.3  # Increased clearance
             stone_mesh = create_radiant_cut_diamond(stone_size_actual, stone_depth)
             rotation_angle = (np.pi / prong_count)
             rotation_matrix = trimesh.transformations.rotation_matrix(rotation_angle, [0, 1, 0])
             stone_mesh.apply_transform(rotation_matrix)
-            actual_prong_spread_radius = (stone_size / 2) * np.sqrt(2) + 0.1 + (prong_thickness_base / 2)
+            actual_prong_spread_radius = (stone_size / 2) * 1.3 + 0.2 + (prong_thickness_base / 2)
         else:
             stone_mesh = create_brilliant_cut_diamond(stone_radius, stone_depth)
         
